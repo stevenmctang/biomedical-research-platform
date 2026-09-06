@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   BackgroundVariant,
   useNodesState,
@@ -34,6 +35,14 @@ interface KnowledgeGraphViewProps {
 }
 
 export function KnowledgeGraphView({ graph }: KnowledgeGraphViewProps) {
+  return (
+    <ReactFlowProvider>
+      <KnowledgeGraphInner graph={graph} />
+    </ReactFlowProvider>
+  )
+}
+
+function KnowledgeGraphInner({ graph }: KnowledgeGraphViewProps) {
   const data = useMemo(() => graph ?? getFullGraph(), [graph])
 
   const initialNodes = useMemo(() => toFlowNodes(data), [data])
