@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -57,6 +57,13 @@ function KnowledgeGraphInner({ graph }: KnowledgeGraphViewProps) {
   )
 
   const reactFlow = useReactFlow()
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      reactFlow.fitView({ padding: 0.3, duration: 300 })
+    }, 50)
+    return () => clearTimeout(timeout)
+  }, [reactFlow])
 
   const filteredNodes = useMemo(
     () => nodes.filter((n) => visibleTypes.has(n.data.entityType)),
