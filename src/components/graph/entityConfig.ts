@@ -2,40 +2,45 @@ import type { BiomedicalEntityType } from '../../types/biomedical'
 
 export interface EntityVisualConfig {
   color: string
-  softColor: string
+  bg: string
+  border: string
   icon: string
   label: string
-  shape: 'rect' | 'pill'
+  abbr: string
 }
 
 export const entityVisuals: Record<BiomedicalEntityType, EntityVisualConfig> = {
   disease: {
-    color: '#3157d5',
-    softColor: '#e6ebff',
+    color: '#2563eb',
+    bg: '#eff4ff',
+    border: '#bfdbfe',
     icon: 'disease',
     label: 'Disease',
-    shape: 'rect',
+    abbr: 'DIS',
   },
   gene: {
-    color: '#2d8659',
-    softColor: '#e0f3e8',
+    color: '#059669',
+    bg: '#ecfdf5',
+    border: '#a7f3d0',
     icon: 'gene',
     label: 'Gene',
-    shape: 'pill',
+    abbr: 'GEN',
   },
   pathway: {
-    color: '#b06a1f',
-    softColor: '#f7ecd9',
+    color: '#d97706',
+    bg: '#fffbeb',
+    border: '#fde68a',
     icon: 'pathway',
     label: 'Pathway',
-    shape: 'pill',
+    abbr: 'PTH',
   },
   drug: {
-    color: '#9333b0',
-    softColor: '#f0e0f7',
+    color: '#9333ea',
+    bg: '#faf5ff',
+    border: '#e9d5ff',
     icon: 'drug',
     label: 'Drug',
-    shape: 'rect',
+    abbr: 'DRG',
   },
 }
 
@@ -45,4 +50,11 @@ export const relationshipLabels: Record<string, string> = {
   involves: 'involves',
   treats: 'treats',
   targets: 'targets',
+}
+
+export const evidenceStyles: Record<string, { stroke: string; width: number; dash?: string }> = {
+  strong: { stroke: '#6b7280', width: 1.8 },
+  moderate: { stroke: '#9ca3af', width: 1.4 },
+  limited: { stroke: '#c7c9c1', width: 1.2, dash: '5 4' },
+  default: { stroke: '#b8bab2', width: 1.3 },
 }

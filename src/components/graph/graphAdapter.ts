@@ -19,44 +19,52 @@ export type BiomedicalEdgeData = {
   [key: string]: unknown
 }
 
-type EntityGroup = 'disease' | 'gene' | 'pathway' | 'drug'
+type XY = { x: number; y: number }
 
-const GROUP_ORDER: EntityGroup[] = ['disease', 'gene', 'pathway', 'drug']
+const GROUP_ANGLES: Record<string, number> = {
+  disease: -Math.PI / 2,
+  gene: 0,
+  pathway: Math.PI / 2,
+  drug: Math.PI,
+}
 
-function computeNodePositions(graph: KnowledgeGraph): Map<string, { x: number; y: number }> {
-  const positions = new Map<string, { x: number; y: number }>()
-  const byGroup: Record<EntityGroup, GraphNode[]> = {
+function computeLayout(graph: KnowledgeGraph): Map<string, XY> {
+  const positions = new Map<string, XY>()
+  const groups: Record<string, GraphNode[]> = {
     disease: [],
     gene: [],
     pathway: [],
     drug: [],
   }
 
-  graph.nodes.forEach((node) => {
-    byGroup[node.type as EntityGroup]?.push(node)
+  graph.nodes.forEach((n) => {
+    const g = groups[n.type]
+    if (g) g.push(n)
   })
 
-  const groupCount = GROUP_ORDER.length
-  const baseRadius = 340
+  const baseRadius = 280
+  const innerRadius = 110
 
-  GROUP_ORDER.forEach((group, groupIndex) => {
-    const nodesInGroup = byGroup[group]
-    const groupAngle = (groupIndex / groupCount) * Math.PI * 2 - Math.PI / 2
-    const groupCenterX = Math.cos(groupAngle) * baseRadius
-    const groupCenterY = Math.sin(groupAngle) * baseRadius
+  Object.entries(groups).forEach(([type, nodes]) => {
+    const angle = GROUP_ANGLES[type]
+    const cx = Math.cos(angle) * baseRadius
+    const cy = Math.sin(angle) * baseRadius
 
-    nodesInGroup.forEach((node, nodeIndex) => {
-      if (nodesInGroup.length === 1) {
-        positions.set(node.id, { x: groupCenterX, y: groupCenterY })
-        return
-      }
+    if (nodes.length === 0) return
+    if (nodes.length === 1) {
+      positions.set(nodes[0].id, { x: cx, y: cy })
+      return
+    }
 
-      const subRadius = 150
-      const subAngle =
-        (nodeIndex / nodesInGroup.length) * Math.PI * 2 + groupAngle
+    const spread = Math.min(Math.PI * 0.7, 0.35 * nodes.length)
+    const startAngle = angle - spread / 2
+    const step = spread / (nodes.length - 1)
+
+    nodes.forEach((node, i) => {
+      const a = startAngle + step * i
       positions.set(node.id, {
-        x: groupCenterX + Math.cos(subAngle) * subRadius,
-        y: groupCenterY + Math.sin(subAngle) * subRadius,
+        x: cx + Math.cos(a) * innerRadius,
+        y: cy + Math.sin(a) * innerRadius,
       })
     })
   })
@@ -65,8 +73,7 @@ function computeNodePositions(graph: KnowledgeGraph): Map<string, { x: number; y
 }
 
 export function toFlowNodes(graph: KnowledgeGraph): Node<BiomedicalNodeData>[] {
-  const positions = computeNodePositions(graph)
-
+  const positions = computeLayout(graph)
   return graph.nodes.map((node) => ({
     id: node.id,
     type: 'biomedicalNode',
@@ -85,8 +92,7 @@ export function toFlowEdges(graph: KnowledgeGraph): Edge<BiomedicalEdgeData>[] {
     id: edge.id,
     source: edge.source,
     target: edge.target,
-    type: 'smoothstep',
-    animated: false,
+    type: 'biomedicalEdge',
     data: {
       relationship: edge.relationship,
       evidence: edge.evidence,

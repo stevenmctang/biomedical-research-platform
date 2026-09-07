@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -28,7 +28,7 @@ import { GraphLegend } from './GraphLegend'
 import './graph.css'
 
 const nodeTypes: NodeTypes = { biomedicalNode: BiomedicalNode }
-const edgeTypes: EdgeTypes = { smoothstep: BiomedicalEdge }
+const edgeTypes: EdgeTypes = { biomedicalEdge: BiomedicalEdge }
 
 interface KnowledgeGraphViewProps {
   graph?: ReturnType<typeof getFullGraph>
@@ -44,37 +44,36 @@ export function KnowledgeGraphView({ graph }: KnowledgeGraphViewProps) {
 
 function KnowledgeGraphInner({ graph }: KnowledgeGraphViewProps) {
   const data = useMemo(() => graph ?? getFullGraph(), [graph])
+  const flowNodes = useMemo(() => toFlowNodes(data), [data])
+  const flowEdges = useMemo(() => toFlowEdges(data), [data])
 
-  const initialNodes = useMemo(() => toFlowNodes(data), [data])
-  const initialEdges = useMemo(() => toFlowEdges(data), [data])
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
-
+  const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes)
+  const [edges, , onEdgesChange] = useEdgesState(flowEdges)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [visibleTypes, setVisibleTypes] = useState<Set<BiomedicalEntityType>>(
     new Set(['disease', 'gene', 'pathway', 'drug']),
   )
-
   const reactFlow = useReactFlow()
+  const fitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      reactFlow.fitView({ padding: 0.3, duration: 300 })
-    }, 50)
-    return () => clearTimeout(timeout)
+    if (fitTimeout.current) clearTimeout(fitTimeout.current)
+    fitTimeout.current = setTimeout(() => {
+      reactFlow.fitView({ padding: 0.25, duration: 300 })
+    }, 60)
+    return () => {
+      if (fitTimeout.current) clearTimeout(fitTimeout.current)
+    }
   }, [reactFlow])
 
   const filteredNodes = useMemo(
     () => nodes.filter((n) => visibleTypes.has(n.data.entityType)),
     [nodes, visibleTypes],
   )
-
   const visibleNodeIds = useMemo(
     () => new Set(filteredNodes.map((n) => n.id)),
     [filteredNodes],
   )
-
   const filteredEdges = useMemo(
     () =>
       edges.filter(
@@ -83,24 +82,29 @@ function KnowledgeGraphInner({ graph }: KnowledgeGraphViewProps) {
     [edges, visibleNodeIds],
   )
 
-  const connectionEdges = useMemo(() => {
-    if (!selectedNode) return [] as { relationship: string; connectedLabel: string }[]
+  const connections = useMemo(() => {
+    if (!selectedNode) return []
     return data.edges
       .filter(
-        (e: GraphEdge) => e.source === selectedNode.id || e.target === selectedNode.id,
+        (e: GraphEdge) =>
+          e.source === selectedNode.id || e.target === selectedNode.id,
       )
       .map((e: GraphEdge) => {
-        const connectedId = e.source === selectedNode.id ? e.target : e.source
-        const connected = data.nodes.find((n: GraphNode) => n.id === connectedId)
+        const connectedId =
+          e.source === selectedNode.id ? e.target : e.source
+        const connected = data.nodes.find(
+          (n: GraphNode) => n.id === connectedId,
+        )
         return {
           relationship: e.relationship.replace(/-/g, ' '),
           connectedLabel: connected?.label ?? connectedId,
+          connectedType: connected?.type ?? '',
         }
       })
   }, [selectedNode, data])
 
   const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
+    (_e: React.MouseEvent, node: Node) => {
       const original = data.nodes.find((n) => n.id === node.id)
       if (original) setSelectedNode(original)
     },
@@ -117,22 +121,12 @@ function KnowledgeGraphInner({ graph }: KnowledgeGraphViewProps) {
   }, [])
 
   const handleFitView = useCallback(() => {
-    reactFlow.fitView({ padding: 0.25, duration: 400 })
-  }, [reactFlow])
-
-  const handleZoomIn = useCallback(() => {
-    reactFlow.zoomIn({ duration: 200 })
-  }, [reactFlow])
-
-  const handleZoomOut = useCallback(() => {
-    reactFlow.zoomOut({ duration: 200 })
+    reactFlow.fitView({ padding: 0.25, duration: 300 })
   }, [reactFlow])
 
   const handleClearSelection = useCallback(() => {
     setSelectedNode(null)
-    setNodes((nds) =>
-      nds.map((n) => ({ ...n, selected: false })),
-    )
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: false })))
   }, [setNodes])
 
   return (
@@ -147,40 +141,40 @@ function KnowledgeGraphInner({ graph }: KnowledgeGraphViewProps) {
         onNodeClick={handleNodeClick}
         onPaneClick={handleClearSelection}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
-        minZoom={0.25}
+        fitViewOptions={{ padding: 0.25 }}
+        minZoom={0.2}
         maxZoom={3}
         proOptions={{ hideAttribution: true }}
+        defaultEdgeOptions={{ type: 'biomedicalEdge' }}
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={26}
-          size={1.4}
-          color="#c8cabf"
+          gap={24}
+          size={1.2}
+          color="#d1d3ca"
         />
       </ReactFlow>
 
       <div className="kg-toolbar">
         <GraphLegend visibleTypes={visibleTypes} onToggleType={handleToggleType} />
-        <div className="kg-toolbar-controls" role="group" aria-label="Graph controls">
-          <button type="button" onClick={handleZoomIn} aria-label="Zoom in">
-            <ZoomIn size={17} />
+        <div className="kg-controls" role="group" aria-label="Graph controls">
+          <button type="button" onClick={() => reactFlow.zoomIn({ duration: 200 })} aria-label="Zoom in">
+            <ZoomIn size={15} />
           </button>
-          <button type="button" onClick={handleZoomOut} aria-label="Zoom out">
-            <ZoomOut size={17} />
+          <button type="button" onClick={() => reactFlow.zoomOut({ duration: 200 })} aria-label="Zoom out">
+            <ZoomOut size={15} />
           </button>
           <button type="button" onClick={handleFitView} aria-label="Fit to screen">
-            <Maximize2 size={17} />
+            <Maximize2 size={15} />
           </button>
-          <span className="kg-toolbar-label">
-            Drag nodes · Pan · Scroll to zoom
-          </span>
         </div>
       </div>
 
+      <div className="kg-hint">Drag nodes · Pan canvas · Scroll to zoom</div>
+
       <GraphDetailPanel
         node={selectedNode}
-        edges={connectionEdges}
+        connections={connections}
         onClose={handleClearSelection}
       />
     </div>

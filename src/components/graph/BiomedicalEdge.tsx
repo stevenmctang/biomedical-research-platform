@@ -2,10 +2,10 @@ import { memo } from 'react'
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  getSmoothStepPath,
+  getBezierPath,
   type EdgeProps,
 } from '@xyflow/react'
-import { relationshipLabels } from './entityConfig'
+import { evidenceStyles, relationshipLabels } from './entityConfig'
 import type { BiomedicalEdgeData } from './graphAdapter'
 
 function BiomedicalEdgeComponent({
@@ -20,7 +20,7 @@ function BiomedicalEdgeComponent({
   selected,
 }: EdgeProps) {
   const edgeData = data as BiomedicalEdgeData | undefined
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [path, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -29,9 +29,8 @@ function BiomedicalEdgeComponent({
     targetPosition,
   })
 
-  const evidenceClass = edgeData?.evidence
-    ? `kg-edge--${edgeData.evidence}`
-    : ''
+  const evKey = edgeData?.evidence ?? 'default'
+  const ev = evidenceStyles[evKey] ?? evidenceStyles.default
   const label = edgeData
     ? relationshipLabels[edgeData.relationship] ?? edgeData.relationship
     : ''
@@ -40,13 +39,16 @@ function BiomedicalEdgeComponent({
     <>
       <BaseEdge
         id={id}
-        path={edgePath}
-        className={`kg-edge ${evidenceClass} ${selected ? 'kg-edge--selected' : ''}`}
+        path={path}
+        style={{
+          stroke: selected ? '#2563eb' : ev.stroke,
+          strokeWidth: selected ? 2.2 : ev.width,
+          strokeDasharray: ev.dash,
+        }}
       />
-
       <EdgeLabelRenderer>
         <div
-          className="kg-edge-label"
+          className={`kg-edge-label ${selected ? 'kg-edge-label--active' : ''}`}
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
           }}

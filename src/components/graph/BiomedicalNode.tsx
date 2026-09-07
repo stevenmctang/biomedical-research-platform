@@ -1,53 +1,43 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { Dna, FlaskConical, Network, Stethoscope } from 'lucide-react'
+import { Dna, FlaskConical, GitBranch, Stethoscope } from 'lucide-react'
 import type { BiomedicalNodeData } from './graphAdapter'
 import { entityVisuals } from './entityConfig'
 
-function getEntityIcon(icon: string) {
-  if (icon === 'disease') return <Stethoscope size={16} />
-  if (icon === 'gene') return <Dna size={16} />
-  if (icon === 'pathway') return <Network size={16} />
-  if (icon === 'drug') return <FlaskConical size={16} />
-  return null
-}
+const iconMap = {
+  disease: Stethoscope,
+  gene: Dna,
+  pathway: GitBranch,
+  drug: FlaskConical,
+} as const
 
 function BiomedicalNode({ data, selected }: NodeProps) {
   const nodeData = data as BiomedicalNodeData
   const visual = entityVisuals[nodeData.entityType]
-
-  const className = [
-    'kg-node',
-    `kg-node--${nodeData.entityType}`,
-    `kg-node--${visual.shape}`,
-    selected ? 'kg-node--selected' : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const Icon = iconMap[visual.icon]
 
   return (
     <div
-      className={className}
+      className={`kg-node ${selected ? 'kg-node--selected' : ''}`}
       style={{
-        borderColor: visual.color,
-        background: visual.softColor,
+        borderColor: selected ? visual.color : visual.border,
+        background: visual.bg,
       }}
     >
       <Handle type="target" position={Position.Top} className="kg-handle" />
-
-      <div className="kg-node-inner">
-        <span
-          className="kg-node-icon"
-          style={{ color: visual.color, background: 'white' }}
-        >
-          {getEntityIcon(visual.icon)}
-        </span>
-
-        <span className="kg-node-type">{visual.label}</span>
-        <span className="kg-node-label">{nodeData.label}</span>
-      </div>
-
       <Handle type="source" position={Position.Bottom} className="kg-handle" />
+      <Handle type="target" position={Position.Left} className="kg-handle" />
+      <Handle type="source" position={Position.Right} className="kg-handle" />
+
+      <div className="kg-node-row">
+        <span className="kg-node-icon" style={{ color: visual.color }}>
+          <Icon size={13} />
+        </span>
+        <span className="kg-node-type" style={{ color: visual.color }}>
+          {visual.abbr}
+        </span>
+      </div>
+      <span className="kg-node-label">{nodeData.label}</span>
     </div>
   )
 }

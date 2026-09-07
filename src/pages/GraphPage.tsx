@@ -1,35 +1,32 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { KnowledgeGraphView } from '../components/graph/KnowledgeGraphView'
+import './GraphPage.css'
 
 export function GraphPage() {
   return (
     <div className="kg-page">
-      <header className="kg-page-header">
-        <div className="kg-page-header-inner">
-          <Link to="/" className="brand">
-            Helix
-          </Link>
-
-          <span className="kg-page-title">Knowledge Graph</span>
-
-          <Link to="/" className="kg-page-back">
-            <ArrowLeft size={15} />
-            Back to Home
-          </Link>
+      <header className="kg-header">
+        <div className="kg-header-left">
+          <Link to="/" className="kg-header-brand">Helix</Link>
+          <span className="kg-header-sep">/</span>
+          <span className="kg-header-title">Knowledge Graph</span>
         </div>
+        <Link to="/" className="kg-header-back">
+          <ArrowLeft size={13} />
+          Back
+        </Link>
       </header>
 
-      <main className="kg-page-main">
+      <main className="kg-main">
         <KnowledgeGraphView />
       </main>
 
-      <footer className="kg-page-footer">
-        <span>Helix Biomedical Research Intelligence</span>
-        <p>
-          Development dataset for research and educational use. Biomedical
-          relationships require independent scientific validation.
-        </p>
+      <footer className="kg-footer">
+        <span className="kg-footer-label">Development dataset</span>
+        <span className="kg-footer-note">
+          For research and educational use. Relationships require independent scientific validation.
+        </span>
       </footer>
     </div>
   )
