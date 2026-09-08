@@ -1,9 +1,33 @@
 import { Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Database } from 'lucide-react'
 import { KnowledgeGraphView } from '../components/graph/KnowledgeGraphView'
+import { GraphSearchBar } from '../components/GraphSearchBar'
+import { useGraphData } from '../hooks/useGraphData'
+import type { SearchResult } from '../types/biomedical'
 import './GraphPage.css'
 
 export function GraphPage() {
+  const {
+    graph,
+    loading,
+    error,
+    empty,
+    searchResults,
+    searching,
+    searchError,
+    loadNeighborhood,
+    search,
+    clearSearch,
+  } = useGraphData('biolink')
+
+  const handleSelectResult = (result: SearchResult) => {
+    loadNeighborhood(result.id, 1)
+  }
+
+  const handleNodeExpand = (entityId: string) => {
+    loadNeighborhood(entityId, 1)
+  }
+
   return (
     <div className="kg-page">
       <header className="kg-header">
@@ -18,14 +42,34 @@ export function GraphPage() {
         </Link>
       </header>
 
+      <div className="kg-search-bar">
+        <GraphSearchBar
+          searchResults={searchResults}
+          searching={searching}
+          searchError={searchError}
+          onSearch={search}
+          onSelect={handleSelectResult}
+          onClear={clearSearch}
+        />
+      </div>
+
       <main className="kg-main">
-        <KnowledgeGraphView />
+        <KnowledgeGraphView
+          graph={graph}
+          loading={loading}
+          error={error}
+          empty={empty}
+          onNodeExpand={handleNodeExpand}
+        />
       </main>
 
       <footer className="kg-footer">
-        <span className="kg-footer-label">Development dataset</span>
+        <span className="kg-footer-source">
+          <Database size={11} />
+          Monarch Initiative API
+        </span>
         <span className="kg-footer-note">
-          For research and educational use. Relationships require independent scientific validation.
+          Data from the Monarch Knowledge Graph. For research and educational use only.
         </span>
       </footer>
     </div>

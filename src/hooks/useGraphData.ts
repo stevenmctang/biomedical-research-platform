@@ -4,7 +4,7 @@ import type {
   KnowledgeGraph,
   SearchResult,
 } from '../types/biomedical'
-import { defaultProvider, createDataProvider } from '../api/providers'
+import { createDataProvider } from '../api/providers'
 import type { DataProviderType } from '../types/biomedical'
 
 interface UseGraphDataState {
