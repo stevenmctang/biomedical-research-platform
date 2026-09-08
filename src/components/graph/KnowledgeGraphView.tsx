@@ -10,11 +10,13 @@ import {
   type EdgeTypes,
   type NodeTypes,
   type Node,
+  type Edge,
 } from '@xyflow/react'
 import { AlertCircle, Maximize2, ZoomIn, ZoomOut } from 'lucide-react'
 import '@xyflow/react/dist/style.css'
 
 import type {
+  AssociationDetail,
   BiomedicalEntityType,
   GraphEdge,
   GraphNode,
@@ -24,7 +26,9 @@ import { toFlowEdges, toFlowNodes } from './graphAdapter'
 import BiomedicalNode from './BiomedicalNode'
 import { BiomedicalEdge } from './BiomedicalEdge'
 import { GraphDetailPanel } from './GraphDetailPanel'
+import { EdgeDetailPanel } from './EdgeDetailPanel'
 import { GraphLegend } from './GraphLegend'
+import { createDataProvider } from '../../api/providers'
 import './graph.css'
 
 const nodeTypes: NodeTypes = { biomedicalNode: BiomedicalNode }
@@ -71,11 +75,17 @@ function KnowledgeGraphInner({
   const [nodes, setNodes, onNodesChange] = useNodesState(flowNodes)
   const [_edges, setEdges, onEdgesChange] = useEdgesState(flowEdges)
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
+  const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null)
+  const [edgeSourceNode, setEdgeSourceNode] = useState<GraphNode | null>(null)
+  const [edgeTargetNode, setEdgeTargetNode] = useState<GraphNode | null>(null)
+  const [associationDetail, setAssociationDetail] = useState<AssociationDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [visibleTypes, setVisibleTypes] = useState<Set<BiomedicalEntityType>>(
     new Set(['disease', 'gene', 'pathway', 'drug', 'phenotype', 'anatomy', 'function', 'variant']),
   )
   const reactFlow = useReactFlow()
   const fitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const provider = useRef(createDataProvider('biolink')).current
 
   // Sync React Flow state when graph data changes
   useEffect(() => {
@@ -145,9 +155,39 @@ function KnowledgeGraphInner({
     (_e: React.MouseEvent, node: Node) => {
       if (!graph) return
       const original = graph.nodes.find((n) => n.id === node.id)
-      if (original) setSelectedNode(original)
+      if (original) {
+        setSelectedNode(original)
+        setSelectedEdge(null)
+      }
     },
     [graph],
+  )
+
+  const handleEdgeClick = useCallback(
+    (_e: React.MouseEvent, edge: Edge) => {
+      if (!graph) return
+      const original = graph.edges.find((e) => e.id === edge.id)
+      if (original) {
+        setSelectedEdge(original)
+        setSelectedNode(null)
+        const src = graph.nodes.find((n) => n.id === original.source) ?? null
+        const tgt = graph.nodes.find((n) => n.id === original.target) ?? null
+        setEdgeSourceNode(src)
+        setEdgeTargetNode(tgt)
+        setAssociationDetail(null)
+        setLoadingDetail(true)
+        provider
+          .getAssociation(original.id)
+          .then((detail) => {
+            setAssociationDetail(detail)
+            setLoadingDetail(false)
+          })
+          .catch(() => {
+            setLoadingDetail(false)
+          })
+      }
+    },
+    [graph, provider],
   )
 
   const handleNodeDoubleClick = useCallback(
@@ -172,8 +212,15 @@ function KnowledgeGraphInner({
 
   const handleClearSelection = useCallback(() => {
     setSelectedNode(null)
+    setSelectedEdge(null)
+    setAssociationDetail(null)
     setNodes((nds) => nds.map((n) => ({ ...n, selected: false })))
   }, [setNodes])
+
+  const handleCloseEdgePanel = useCallback(() => {
+    setSelectedEdge(null)
+    setAssociationDetail(null)
+  }, [])
 
   if (loading && !graph) {
     return (
@@ -233,6 +280,7 @@ function KnowledgeGraphInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         onPaneClick={handleClearSelection}
         fitView
@@ -273,13 +321,26 @@ function KnowledgeGraphInner({
         </div>
       </div>
 
-      <div className="kg-hint">Click to inspect · Double-click to expand · Drag to rearrange</div>
+      <div className="kg-hint">Click node to inspect · Click edge for evidence · Double-click to expand</div>
 
-      <GraphDetailPanel
-        node={selectedNode}
-        connections={connections}
-        onClose={handleClearSelection}
-      />
+      {selectedNode && (
+        <GraphDetailPanel
+          node={selectedNode}
+          connections={connections}
+          onClose={handleClearSelection}
+        />
+      )}
+
+      {selectedEdge && (
+        <EdgeDetailPanel
+          edge={selectedEdge}
+          sourceNode={edgeSourceNode}
+          targetNode={edgeTargetNode}
+          associationDetail={associationDetail}
+          loadingDetail={loadingDetail}
+          onClose={handleCloseEdgePanel}
+        />
+      )}
     </div>
   )
 }

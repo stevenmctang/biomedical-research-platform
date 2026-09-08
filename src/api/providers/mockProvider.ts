@@ -1,4 +1,5 @@
 import type {
+  AssociationDetail,
   BiomedicalEntityType,
   EntityNeighborhood,
   GraphNode,
@@ -58,5 +59,9 @@ export const mockProvider: BiomedicalDataProvider = {
       nodes: subgraph.nodes,
       edges: subgraph.edges,
     }
+  },
+
+  async getAssociation(_associationId: string): Promise<AssociationDetail | null> {
+    return null
   },
 }

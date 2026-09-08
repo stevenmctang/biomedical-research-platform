@@ -5,12 +5,16 @@ import {
   FlaskConical,
   Network,
   Search,
+  ArrowLeft,
+  Microscope,
+  Link2,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { searchBiomedical } from '../utils/searchBiomedical'
-import type { SearchResult } from '../types/biomedical'
+import { getConnectedEntities, getEntityTypeLabel } from '../utils/getConnectedEntities'
+import type { BiomedicalEntityType } from '../types/biomedical'
 
-function getResultIcon(type: SearchResult['type']) {
+function getResultIcon(type: BiomedicalEntityType) {
   if (type === 'gene') return <Dna size={18} />
   if (type === 'drug') return <FlaskConical size={18} />
   if (type === 'pathway') return <Network size={18} />
@@ -18,9 +22,60 @@ function getResultIcon(type: SearchResult['type']) {
   return <Search size={18} />
 }
 
+interface RelationshipContext {
+  sourceId: string
+  sourceLabel: string
+  sourceType: string
+  targetId: string
+  targetLabel: string
+  targetType: string
+  relationship: string
+  associationId: string
+  evidenceCodes?: string
+  knowledgeSource?: string
+}
+
+function parseRelationshipContext(params: URLSearchParams): RelationshipContext | null {
+  const sourceId = params.get('sourceId')
+  const targetId = params.get('targetId')
+  const relationship = params.get('relationship')
+  if (!sourceId || !targetId || !relationship) return null
+
+  return {
+    sourceId,
+    sourceLabel: params.get('sourceLabel') ?? sourceId,
+    sourceType: params.get('sourceType') ?? '',
+    targetId,
+    targetLabel: params.get('targetLabel') ?? targetId,
+    targetType: params.get('targetType') ?? '',
+    relationship,
+    associationId: params.get('associationId') ?? '',
+    evidenceCodes: params.get('evidenceCodes') ?? undefined,
+    knowledgeSource: params.get('knowledgeSource') ?? undefined,
+  }
+}
+
+const RELATIONSHIP_LABELS: Record<string, string> = {
+  'associated-with': 'associated with',
+  'participates-in': 'participates in',
+  'involves': 'involves',
+  'treats': 'treats',
+  'targets': 'targets',
+  'has-phenotype': 'has phenotype',
+  'expressed-in': 'expressed in',
+  'causes': 'causes',
+  'related-to': 'related to',
+}
+
 export function Explore() {
-  const [query, setQuery] = useState('')
-  const [submittedQuery, setSubmittedQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const relationshipContext = useMemo(
+    () => parseRelationshipContext(searchParams),
+    [searchParams],
+  )
+
+  const [query, setQuery] = useState(relationshipContext?.sourceLabel ?? '')
+  const [submittedQuery, setSubmittedQuery] = useState(relationshipContext?.sourceLabel ?? '')
 
   const results = useMemo(() => {
     return searchBiomedical(submittedQuery)
@@ -34,6 +89,12 @@ export function Explore() {
   function runSearch(searchTerm: string) {
     setQuery(searchTerm)
     setSubmittedQuery(searchTerm)
+  }
+
+  function clearRelationshipContext() {
+    setSearchParams({})
+    setQuery('')
+    setSubmittedQuery('')
   }
 
   return (
@@ -55,6 +116,87 @@ export function Explore() {
       </header>
 
       <main className="explorer-main">
+        {relationshipContext && (
+          <section className="relationship-context">
+            <div className="relationship-context-header">
+              <div className="relationship-context-label">
+                <Microscope size={14} />
+                Evidence for Relationship
+              </div>
+              <button
+                type="button"
+                className="relationship-context-close"
+                onClick={clearRelationshipContext}
+              >
+                Clear
+              </button>
+            </div>
+
+            <div className="relationship-context-flow">
+              <div className="relationship-context-entity">
+                <span className="relationship-context-entity-name">
+                  {relationshipContext.sourceLabel}
+                </span>
+                <span className="relationship-context-entity-id">
+                  {relationshipContext.sourceId}
+                </span>
+              </div>
+              <span className="relationship-context-rel">
+                {RELATIONSHIP_LABELS[relationshipContext.relationship] ?? relationshipContext.relationship}
+              </span>
+              <div className="relationship-context-entity">
+                <span className="relationship-context-entity-name">
+                  {relationshipContext.targetLabel}
+                </span>
+                <span className="relationship-context-entity-id">
+                  {relationshipContext.targetId}
+                </span>
+              </div>
+            </div>
+
+            <div className="relationship-context-meta">
+              {relationshipContext.evidenceCodes && (
+                <div className="relationship-context-meta-item">
+                  <span className="relationship-context-meta-label">Evidence codes</span>
+                  <span className="relationship-context-meta-value">
+                    {relationshipContext.evidenceCodes}
+                  </span>
+                </div>
+              )}
+              {relationshipContext.knowledgeSource && (
+                <div className="relationship-context-meta-item">
+                  <span className="relationship-context-meta-label">Knowledge source</span>
+                  <span className="relationship-context-meta-value">
+                    {relationshipContext.knowledgeSource}
+                  </span>
+                </div>
+              )}
+              {relationshipContext.associationId && (
+                <div className="relationship-context-meta-item">
+                  <span className="relationship-context-meta-label">Association ID</span>
+                  <span className="relationship-context-meta-value">
+                    {relationshipContext.associationId}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="relationship-context-note">
+              The Monarch Initiative knowledge graph aggregates evidence from multiple
+              curated biomedical sources. Explore the entities below to investigate
+              the supporting research for this relationship.
+            </p>
+
+            <Link
+              to="/graph"
+              className="relationship-context-back"
+            >
+              <ArrowLeft size={14} />
+              Back to Knowledge Graph
+            </Link>
+          </section>
+        )}
+
         <section className="explorer-hero">
           <p className="eyebrow">RESEARCH EXPLORER</p>
 
@@ -211,7 +353,7 @@ export function Explore() {
                 <p className="eyebrow">SEARCH RESULTS</p>
 
                 <h2>
-                  Results for “{submittedQuery}”
+                  Results for "{submittedQuery}"
                 </h2>
               </div>
 
@@ -223,34 +365,78 @@ export function Explore() {
 
             {results.length > 0 ? (
               <div className="results-list">
-                {results.map((result) => (
-                  <article
-                    className="result-card"
-                    key={`${result.type}-${result.id}`}
-                  >
-                    <div className="result-icon">
-                      {getResultIcon(result.type)}
-                    </div>
+                {results.map((result) => {
+                  const connections = getConnectedEntities(result.id)
 
-                    <div className="result-content">
-                      <p className="result-type">
-                        {result.subtitle}
-                      </p>
-
-                      <h3>{result.title}</h3>
-
-                      <p>{result.description}</p>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="result-open-button"
+                  return (
+                    <article
+                      className="result-card result-card-with-connections"
+                      key={`${result.type}-${result.id}`}
                     >
-                      Open
-                      <ArrowRight size={16} />
-                    </button>
-                  </article>
-                ))}
+                      <div className="result-card-main">
+                        <div className="result-icon">
+                          {getResultIcon(result.type)}
+                        </div>
+
+                        <div className="result-content">
+                          <p className="result-type">
+                            {result.subtitle}
+                          </p>
+
+                          <h3>{result.title}</h3>
+
+                          <p>{result.description}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="result-open-button"
+                        >
+                          Open
+                          <ArrowRight size={16} />
+                        </button>
+                      </div>
+
+                      {connections.length > 0 && (
+                        <div className="result-connections">
+                          <div className="result-connections-header">
+                            <Link2 size={13} />
+                            <span>
+                              {connections.length} connected{' '}
+                              {connections.length === 1 ? 'entity' : 'entities'}
+                            </span>
+                          </div>
+
+                          <div className="result-connections-list">
+                            {connections.map((conn) => (
+                              <div
+                                className="result-connection-item"
+                                key={conn.edge.id}
+                              >
+                                <div className="result-connection-icon">
+                                  {getResultIcon(conn.node.type)}
+                                </div>
+                                <div className="result-connection-text">
+                                  <span className="result-connection-label">
+                                    {conn.node.label}
+                                  </span>
+                                  <span className="result-connection-relationship">
+                                    {conn.direction === 'incoming'
+                                      ? `${conn.relationshipLabel} ${result.title}`
+                                      : `${conn.relationshipLabel} ${conn.node.label}`}
+                                  </span>
+                                  <span className="result-connection-type">
+                                    {getEntityTypeLabel(conn.node.type)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </article>
+                  )
+                })}
               </div>
             ) : (
               <div className="no-results">

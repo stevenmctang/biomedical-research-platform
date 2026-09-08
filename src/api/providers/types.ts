@@ -1,4 +1,5 @@
 import type {
+  AssociationDetail,
   BiomedicalEntityType,
   EntityNeighborhood,
   GraphNode,
@@ -18,4 +19,6 @@ export interface BiomedicalDataProvider {
   ): Promise<EntityNeighborhood>
 
   getEntity(entityId: string): Promise<GraphNode | null>
+
+  getAssociation(associationId: string): Promise<AssociationDetail | null>
 }

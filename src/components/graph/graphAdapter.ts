@@ -17,6 +17,10 @@ export type BiomedicalNodeData = {
 export type BiomedicalEdgeData = {
   relationship: GraphEdge['relationship']
   evidence?: GraphEdge['evidence']
+  evidenceCodes?: string[]
+  primaryKnowledgeSource?: string
+  publications?: string[]
+  updateDate?: string
   [key: string]: unknown
 }
 
@@ -139,6 +143,10 @@ export function toFlowEdges(graph: KnowledgeGraph): Edge<BiomedicalEdgeData>[] {
     data: {
       relationship: edge.relationship,
       evidence: edge.evidence,
+      evidenceCodes: edge.evidenceCodes,
+      primaryKnowledgeSource: edge.primaryKnowledgeSource,
+      publications: edge.publications,
+      updateDate: edge.updateDate,
     },
   }))
 }

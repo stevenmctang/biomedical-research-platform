@@ -1,4 +1,5 @@
 import type {
+  AssociationDetail,
   BiomedicalEntityType,
   EntityNeighborhood,
   GraphNode,
@@ -37,7 +38,32 @@ interface ApiNeighborhood {
     target: string
     relationship: string
     evidence?: string
+    evidenceCodes?: string[]
+    primaryKnowledgeSource?: string
+    publications?: string[]
+    updateDate?: string
   }[]
+}
+
+interface ApiAssociationDetail {
+  id: string
+  source: string
+  sourceLabel: string
+  sourceCategory: string
+  target: string
+  targetLabel: string
+  targetCategory: string
+  relationship: string
+  predicate: string
+  associationCategory: string
+  evidence?: string
+  evidenceCodes: string[]
+  primaryKnowledgeSource: string
+  providedBy: string[]
+  publications: string[]
+  updateDate: string
+  createdDate: string
+  evidenceCount: number
 }
 
 function headers(): Record<string, string> {
@@ -151,7 +177,25 @@ export const biolinkProvider: BiomedicalDataProvider = {
         target: e.target,
         relationship: e.relationship as never,
         evidence: e.evidence as never,
+        evidenceCodes: e.evidenceCodes,
+        primaryKnowledgeSource: e.primaryKnowledgeSource,
+        publications: e.publications,
+        updateDate: e.updateDate,
       })),
+    }
+  },
+
+  async getAssociation(associationId: string): Promise<AssociationDetail | null> {
+    const res = await fetch(apiUrl(`/association/${encodeURIComponent(associationId)}`), {
+      headers: headers(),
+    })
+
+    if (!res.ok) return null
+
+    const data = (await res.json()) as ApiAssociationDetail
+    return {
+      ...data,
+      evidence: data.evidence as AssociationDetail['evidence'],
     }
   },
 }

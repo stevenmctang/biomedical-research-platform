@@ -87,6 +87,31 @@ export interface GraphEdge {
   target: string
   relationship: RelationshipType
   evidence?: EvidenceStrength
+  evidenceCodes?: string[]
+  primaryKnowledgeSource?: string
+  publications?: string[]
+  updateDate?: string
+}
+
+export interface AssociationDetail {
+  id: string
+  source: string
+  sourceLabel: string
+  sourceCategory: string
+  target: string
+  targetLabel: string
+  targetCategory: string
+  relationship: string
+  predicate: string
+  associationCategory: string
+  evidence?: EvidenceStrength
+  evidenceCodes: string[]
+  primaryKnowledgeSource: string
+  providedBy: string[]
+  publications: string[]
+  updateDate: string
+  createdDate: string
+  evidenceCount: number
 }
 
 export interface KnowledgeGraph {
@@ -115,6 +140,8 @@ export interface BiomedicalDataProvider {
   ): Promise<EntityNeighborhood>
 
   getEntity(entityId: string): Promise<GraphNode | null>
+
+  getAssociation(associationId: string): Promise<AssociationDetail | null>
 }
 
 export interface GraphDataState {

@@ -1,3 +1,4 @@
+// Biomedical data proxy for the Monarch Initiative API v3.
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
@@ -26,8 +27,8 @@ async function getCached(supabase: ReturnType<typeof createSupabase>, key: strin
 
   if (error || !data) return null;
 
-  const expiresAt = new Date(data.expires_at).getTime();
-  if (Date.now() > expiresAt) return null;
+  const expiresAtMs = new Date(data.expires_at).getTime();
+  if (Date.now() > expiresAtMs) return null;
 
   return data.response_body;
 }
@@ -40,7 +41,7 @@ async function setCached(
   const expiresAt = new Date(Date.now() + CACHE_TTL_SECONDS * 1000).toISOString();
   await supabase
     .from("biolink_api_cache")
-    .upsert({ cache_key: key, response_body: body, expires_at });
+    .upsert({ cache_key: key, response_body: body, expires_at: expiresAt });
 }
 
 async function monarchFetch(path: string): Promise<unknown> {
@@ -80,6 +81,15 @@ interface MonarchAssociation {
   category?: string;
   has_evidence?: string[];
   primary_knowledge_source?: string;
+  publications?: string[];
+  provided_by?: string[];
+  update_date?: string;
+  created_date?: string;
+  evidence_count?: number;
+  has_evidence_count?: number;
+  frequency_qualifier?: string;
+  onset_qualifier?: string;
+  severity_qualifier?: string;
 }
 
 interface MonarchSearchResponse {
@@ -182,6 +192,29 @@ function mapEvidence(hasEvidence: string[] | undefined): string | undefined {
   return "limited";
 }
 
+function mapAssociationDetail(assoc: MonarchAssociation) {
+  return {
+    id: assoc.id,
+    source: assoc.subject,
+    sourceLabel: assoc.subject_label ?? assoc.subject,
+    sourceCategory: assoc.subject_category ?? "",
+    target: assoc.object,
+    targetLabel: assoc.object_label ?? assoc.object,
+    targetCategory: assoc.object_category ?? "",
+    relationship: mapRelationship(assoc.predicate, assoc.category),
+    predicate: assoc.predicate ?? "",
+    associationCategory: assoc.category ?? "",
+    evidence: mapEvidence(assoc.has_evidence),
+    evidenceCodes: assoc.has_evidence ?? [],
+    primaryKnowledgeSource: assoc.primary_knowledge_source ?? "",
+    providedBy: assoc.provided_by ?? [],
+    publications: assoc.publications ?? [],
+    updateDate: assoc.update_date ?? "",
+    createdDate: assoc.created_date ?? "",
+    evidenceCount: assoc.evidence_count ?? assoc.has_evidence_count ?? 0,
+  };
+}
+
 async function handleSearch(
   params: URLSearchParams,
   supabase: ReturnType<typeof createSupabase>,
@@ -251,6 +284,30 @@ async function handleEntity(
   return jsonResponse(entity);
 }
 
+async function handleAssociation(
+  associationId: string,
+  supabase: ReturnType<typeof createSupabase>,
+): Promise<Response> {
+  const cacheKey = `association:${associationId}`;
+  const cached = await getCached(supabase, cacheKey);
+  if (cached) return jsonResponse(cached);
+
+  // Monarch API returns association details via the entity associations endpoint
+  // with a search by association ID. We try fetching it directly.
+  try {
+    const data = (await monarchFetch(
+      `/association/${encodeURIComponent(associationId)}`,
+    )) as MonarchAssociation;
+
+    const detail = mapAssociationDetail(data);
+    await setCached(supabase, cacheKey, detail);
+    return jsonResponse(detail);
+  } catch {
+    // Fallback: try searching associations for this ID
+    return errorResponse("Association not found", 404);
+  }
+}
+
 async function handleNeighborhood(
   entityId: string,
   params: URLSearchParams,
@@ -277,6 +334,10 @@ async function handleNeighborhood(
     target: string;
     relationship: string;
     evidence?: string;
+    evidenceCodes?: string[];
+    primaryKnowledgeSource?: string;
+    publications?: string[];
+    updateDate?: string;
   }>();
 
   const visited = new Set<string>();
@@ -313,6 +374,10 @@ async function handleNeighborhood(
               target: assoc.object,
               relationship: rel,
               evidence,
+              evidenceCodes: assoc.has_evidence ?? [],
+              primaryKnowledgeSource: assoc.primary_knowledge_source ?? "",
+              publications: assoc.publications ?? [],
+              updateDate: assoc.update_date ?? "",
             });
           }
 
@@ -377,6 +442,12 @@ Deno.serve(async (req: Request) => {
     if (entityMatch) {
       const entityId = decodeURIComponent(entityMatch[1]);
       return await handleEntity(entityId, supabase);
+    }
+
+    const associationMatch = path.match(/^\/association\/([^/]+)$/);
+    if (associationMatch) {
+      const associationId = decodeURIComponent(associationMatch[1]);
+      return await handleAssociation(associationId, supabase);
     }
 
     const neighborhoodMatch = path.match(
