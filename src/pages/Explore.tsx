@@ -70,17 +70,9 @@ import {
   searchPubMed,
 } from '../services/pubmed'
 
-import {
-  searchOpenAlex,
-} from '../server/openalex'
-
 import type {
   PubMedPaper,
 } from '../types/pubmed'
-
-import type {
-  OpenAlexPaper,
-} from '../types/openalex'
 
 import type {
   ResearchEdge,
@@ -105,36 +97,6 @@ type HelixFlowEdge =
   Edge
 
 
-type LiteratureSource =
-  | 'PubMed'
-  | 'OpenAlex'
-
-
-interface LiteraturePaper {
-  id: string
-
-  source: LiteratureSource
-
-  title: string
-
-  authors: string[]
-
-  journal: string
-
-  publicationDate: string
-
-  doi?: string
-
-  abstract?: string
-
-  url: string
-
-  citedByCount?: number
-
-  isOpenAccess?: boolean
-}
-
-
 const exampleQuestions = [
   'What evidence connects SOD1 to ALS?',
   'How does CRISPR-Cas9 work?',
@@ -153,67 +115,89 @@ const NODE_HEIGHT =
 function getNodeIcon(
   type: ResearchNodeType,
 ) {
-  if (type === 'gene') {
+  if (
+    type === 'gene'
+  ) {
     return (
       <Dna size={19} />
     )
   }
 
-  if (type === 'drug') {
+  if (
+    type === 'drug'
+  ) {
     return (
       <FlaskConical size={19} />
     )
   }
 
-  if (type === 'pathway') {
+  if (
+    type === 'pathway'
+  ) {
     return (
       <Network size={19} />
     )
   }
 
-  if (type === 'molecule') {
+  if (
+    type === 'molecule'
+  ) {
     return (
       <Beaker size={19} />
     )
   }
 
-  if (type === 'material') {
+  if (
+    type === 'material'
+  ) {
     return (
       <CircleDot size={19} />
     )
   }
 
-  if (type === 'technology') {
+  if (
+    type === 'technology'
+  ) {
     return (
       <Atom size={19} />
     )
   }
 
-  if (type === 'theory') {
+  if (
+    type === 'theory'
+  ) {
     return (
       <Lightbulb size={19} />
     )
   }
 
-  if (type === 'experiment') {
+  if (
+    type === 'experiment'
+  ) {
     return (
       <FlaskConical size={19} />
     )
   }
 
-  if (type === 'paper') {
+  if (
+    type === 'paper'
+  ) {
     return (
       <BookOpen size={19} />
     )
   }
 
-  if (type === 'dataset') {
+  if (
+    type === 'dataset'
+  ) {
     return (
       <Database size={19} />
     )
   }
 
-  if (type === 'question') {
+  if (
+    type === 'question'
+  ) {
     return (
       <Sparkles size={19} />
     )
@@ -310,12 +294,23 @@ function layoutGraph(
   )
 
   graph.setGraph({
-    rankdir: 'LR',
-    ranksep: 125,
-    nodesep: 75,
-    edgesep: 30,
-    marginx: 60,
-    marginy: 60,
+    rankdir:
+      'LR',
+
+    ranksep:
+      125,
+
+    nodesep:
+      75,
+
+    edgesep:
+      30,
+
+    marginx:
+      60,
+
+    marginy:
+      60,
   })
 
 
@@ -538,32 +533,34 @@ function getEvidenceLabel(
 }
 
 
-function getLiteratureSource(
+function shouldSearchPubMed(
   node: ResearchNode,
-): LiteratureSource {
-  const pubMedDomains = [
+) {
+  const biomedicalDomains = [
     'Biomedical Science',
     'Biology',
     'Neuroscience',
   ]
 
-  return pubMedDomains.includes(
-    node.domain,
+  return (
+    biomedicalDomains.includes(
+      node.domain,
+    ) &&
+    node.type !==
+      'question'
   )
-    ? 'PubMed'
-    : 'OpenAlex'
 }
 
 
-function buildLiteratureQuery(
+function buildPubMedQuery(
   node: ResearchNode,
   map: ResearchMap,
 ) {
-  const label =
-    node.label.trim()
-
   const question =
     map.question.trim()
+
+  const label =
+    node.label.trim()
 
 
   if (
@@ -578,87 +575,6 @@ function buildLiteratureQuery(
 
 
   return `${label} ${question}`
-}
-
-
-function mapPubMedPaper(
-  paper: PubMedPaper,
-): LiteraturePaper {
-  return {
-    id:
-      paper.pmid,
-
-    source:
-      'PubMed',
-
-    title:
-      paper.title,
-
-    authors:
-      paper.authors,
-
-    journal:
-      paper.journal,
-
-    publicationDate:
-      paper.publicationDate,
-
-    doi:
-      paper.doi,
-
-    abstract:
-      paper.abstract,
-
-    url:
-      paper.url,
-  }
-}
-
-
-function mapOpenAlexPaper(
-  paper: OpenAlexPaper,
-): LiteraturePaper {
-  return {
-    id:
-      paper.id,
-
-    source:
-      'OpenAlex',
-
-    title:
-      paper.title,
-
-    authors:
-      paper.authors,
-
-    journal:
-      paper.source,
-
-    publicationDate:
-      paper.publicationDate ||
-      (
-        paper.publicationYear
-          ? String(
-              paper.publicationYear,
-            )
-          : ''
-      ),
-
-    doi:
-      paper.doi,
-
-    abstract:
-      paper.abstract,
-
-    url:
-      paper.url,
-
-    citedByCount:
-      paper.citedByCount,
-
-    isOpenAccess:
-      paper.isOpenAccess,
-  }
 }
 
 
@@ -679,7 +595,9 @@ export function Explore() {
     >(null)
 
 
-  if (!researchMap) {
+  if (
+    !researchMap
+  ) {
     return (
       <QuestionScreen
         input={
@@ -696,7 +614,9 @@ export function Explore() {
               question.trim()
 
 
-            if (!cleaned) {
+            if (
+              !cleaned
+            ) {
               return
             }
 
@@ -826,7 +746,7 @@ function QuestionScreen({
             Ask a scientific question and
             explore the concepts,
             mechanisms, evidence, and
-            research behind it.
+            relationships behind it.
           </p>
 
 
@@ -1531,7 +1451,7 @@ function NodeInspector({
     setPapers,
   ] =
     useState<
-      LiteraturePaper[]
+      PubMedPaper[]
     >(
       [],
     )
@@ -1569,8 +1489,8 @@ function NodeInspector({
     )
 
 
-  const literatureSource =
-    getLiteratureSource(
+  const pubMedEnabled =
+    shouldSearchPubMed(
       node,
     )
 
@@ -1582,8 +1502,7 @@ function NodeInspector({
 
 
       if (
-        node.type ===
-        'question'
+        !pubMedEnabled
       ) {
         setPapers(
           [],
@@ -1601,7 +1520,7 @@ function NodeInspector({
       }
 
 
-      async function loadLiterature() {
+      async function loadPapers() {
         setLoadingPapers(
           true,
         )
@@ -1617,56 +1536,29 @@ function NodeInspector({
 
         try {
           const query =
-            buildLiteratureQuery(
+            buildPubMedQuery(
               node,
               map,
             )
 
 
+          const result =
+            await searchPubMed(
+              query,
+              5,
+            )
+
+
           if (
-            literatureSource ===
-            'PubMed'
+            cancelled
           ) {
-            const result =
-              await searchPubMed(
-                query,
-                5,
-              )
-
-
-            if (
-              cancelled
-            ) {
-              return
-            }
-
-
-            setPapers(
-              result.papers.map(
-                mapPubMedPaper,
-              ),
-            )
-          } else {
-            const result =
-              await searchOpenAlex(
-                query,
-                5,
-              )
-
-
-            if (
-              cancelled
-            ) {
-              return
-            }
-
-
-            setPapers(
-              result.papers.map(
-                mapOpenAlexPaper,
-              ),
-            )
+            return
           }
+
+
+          setPapers(
+            result.papers,
+          )
         } catch (
           error
         ) {
@@ -1677,11 +1569,16 @@ function NodeInspector({
           }
 
 
+          setPapers(
+            [],
+          )
+
+
           setPaperError(
             error instanceof
               Error
               ? error.message
-              : 'Literature retrieval failed.',
+              : 'Could not retrieve PubMed literature.',
           )
         } finally {
           if (
@@ -1695,7 +1592,7 @@ function NodeInspector({
       }
 
 
-      loadLiterature()
+      loadPapers()
 
 
       return () => {
@@ -1706,9 +1603,10 @@ function NodeInspector({
     [
       node.id,
       node.label,
+      node.domain,
       node.type,
       map.question,
-      literatureSource,
+      pubMedEnabled,
     ],
   )
 
@@ -1862,19 +1760,17 @@ function NodeInspector({
 
 
       {
-        node.type !==
-          'question' && (
+        pubMedEnabled && (
           <div className="helix-inspector-section">
             <div className="helix-literature-heading">
               <div>
                 <span className="helix-inspector-section-label">
-                  Scientific literature
+                  Live literature
                 </span>
 
                 <p>
-                  Live results from {
-                    literatureSource
-                  }.
+                  Live PubMed results
+                  related to this concept.
                 </p>
               </div>
 
@@ -1890,9 +1786,7 @@ function NodeInspector({
                     className="helix-spinner"
                   />
 
-                  Searching {
-                    literatureSource
-                  }...
+                  Searching PubMed...
                 </div>
               )
             }
@@ -1915,8 +1809,8 @@ function NodeInspector({
               papers.length ===
                 0 && (
                 <div className="helix-literature-empty">
-                  No matching literature
-                  was returned.
+                  No matching PubMed
+                  papers were returned.
                 </div>
               )
             }
@@ -1933,14 +1827,14 @@ function NodeInspector({
                       ) => (
                         <article
                           key={
-                            `${paper.source}-${paper.id}`
+                            paper.pmid
                           }
                           className="helix-paper-card"
                         >
                           <div className="helix-paper-meta">
-                            <span className="helix-source-badge">
-                              {
-                                paper.source
+                            <span>
+                              PMID {
+                                paper.pmid
                               }
                             </span>
 
@@ -1950,17 +1844,6 @@ function NodeInspector({
                                   {
                                     paper.publicationDate
                                   }
-                                </span>
-                              )
-                            }
-
-                            {
-                              typeof paper.citedByCount ===
-                                'number' && (
-                                <span>
-                                  {
-                                    paper.citedByCount
-                                  } citations
                                 </span>
                               )
                             }
@@ -2016,10 +1899,10 @@ function NodeInspector({
                               <p className="helix-paper-abstract">
                                 {
                                   paper.abstract.length >
-                                  300
+                                  260
                                     ? `${paper.abstract.slice(
                                         0,
-                                        300,
+                                        260,
                                       )}…`
                                     : paper.abstract
                                 }
@@ -2029,25 +1912,15 @@ function NodeInspector({
 
 
                           <div className="helix-paper-actions">
-                            <div>
-                              {
-                                paper.doi && (
-                                  <span>
-                                    DOI {
-                                      paper.doi
-                                    }
-                                  </span>
-                                )
-                              }
-
-                              {
-                                paper.isOpenAccess && (
-                                  <span className="helix-open-access">
-                                    Open access
-                                  </span>
-                                )
-                              }
-                            </div>
+                            {
+                              paper.doi && (
+                                <span>
+                                  DOI {
+                                    paper.doi
+                                  }
+                                </span>
+                              )
+                            }
 
                             <a
                               href={
@@ -2056,7 +1929,7 @@ function NodeInspector({
                               target="_blank"
                               rel="noreferrer"
                             >
-                              View source
+                              PubMed
 
                               <ExternalLink size={12} />
                             </a>
