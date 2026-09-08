@@ -45,23 +45,29 @@ import {
   ResearchMapDemo,
 } from './pages/ResearchMapDemo'
 
+import {
+  GraphPage,
+} from './pages/GraphPage'
+
 import './App.css'
 
 
 export default function App() {
   return (
     <BrowserRouter>
-
       <Routes>
-
         <Route
           path="/"
-          element={<Home />}
+          element={
+            <Home />
+          }
         />
 
         <Route
           path="/auth"
-          element={<Auth />}
+          element={
+            <Auth />
+          }
         />
 
         <Route
@@ -73,13 +79,22 @@ export default function App() {
 
         <Route
           path="/explore"
-          element={<Explore />}
+          element={
+            <Explore />
+          }
         />
 
         <Route
           path="/research-map"
           element={
             <ResearchMapDemo />
+          }
+        />
+
+        <Route
+          path="/graph"
+          element={
+            <GraphPage />
           }
         />
 
@@ -127,9 +142,7 @@ export default function App() {
             />
           }
         />
-
       </Routes>
-
     </BrowserRouter>
   )
 }
