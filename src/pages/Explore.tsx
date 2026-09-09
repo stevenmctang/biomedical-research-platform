@@ -7,14 +7,12 @@ import {
   Search,
   ArrowLeft,
   Microscope,
-  Link2,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { searchBiomedical } from '../utils/searchBiomedical'
-import { getConnectedEntities, getEntityTypeLabel } from '../utils/getConnectedEntities'
-import type { BiomedicalEntityType } from '../types/biomedical'
+import type { SearchResult } from '../types/biomedical'
 
-function getResultIcon(type: BiomedicalEntityType) {
+function getResultIcon(type: SearchResult['type']) {
   if (type === 'gene') return <Dna size={18} />
   if (type === 'drug') return <FlaskConical size={18} />
   if (type === 'pathway') return <Network size={18} />
@@ -365,78 +363,34 @@ export function Explore() {
 
             {results.length > 0 ? (
               <div className="results-list">
-                {results.map((result) => {
-                  const connections = getConnectedEntities(result.id)
+                {results.map((result) => (
+                  <article
+                    className="result-card"
+                    key={`${result.type}-${result.id}`}
+                  >
+                    <div className="result-icon">
+                      {getResultIcon(result.type)}
+                    </div>
 
-                  return (
-                    <article
-                      className="result-card result-card-with-connections"
-                      key={`${result.type}-${result.id}`}
+                    <div className="result-content">
+                      <p className="result-type">
+                        {result.subtitle}
+                      </p>
+
+                      <h3>{result.title}</h3>
+
+                      <p>{result.description}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="result-open-button"
                     >
-                      <div className="result-card-main">
-                        <div className="result-icon">
-                          {getResultIcon(result.type)}
-                        </div>
-
-                        <div className="result-content">
-                          <p className="result-type">
-                            {result.subtitle}
-                          </p>
-
-                          <h3>{result.title}</h3>
-
-                          <p>{result.description}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="result-open-button"
-                        >
-                          Open
-                          <ArrowRight size={16} />
-                        </button>
-                      </div>
-
-                      {connections.length > 0 && (
-                        <div className="result-connections">
-                          <div className="result-connections-header">
-                            <Link2 size={13} />
-                            <span>
-                              {connections.length} connected{' '}
-                              {connections.length === 1 ? 'entity' : 'entities'}
-                            </span>
-                          </div>
-
-                          <div className="result-connections-list">
-                            {connections.map((conn) => (
-                              <div
-                                className="result-connection-item"
-                                key={conn.edge.id}
-                              >
-                                <div className="result-connection-icon">
-                                  {getResultIcon(conn.node.type)}
-                                </div>
-                                <div className="result-connection-text">
-                                  <span className="result-connection-label">
-                                    {conn.node.label}
-                                  </span>
-                                  <span className="result-connection-relationship">
-                                    {conn.direction === 'incoming'
-                                      ? `${conn.relationshipLabel} ${result.title}`
-                                      : `${conn.relationshipLabel} ${conn.node.label}`}
-                                  </span>
-                                  <span className="result-connection-type">
-                                    {getEntityTypeLabel(conn.node.type)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </article>
-                  )
-                })}
+                      Open
+                      <ArrowRight size={16} />
+                    </button>
+                  </article>
+                ))}
               </div>
             ) : (
               <div className="no-results">

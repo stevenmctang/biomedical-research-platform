@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Database } from 'lucide-react'
 import { KnowledgeGraphView } from '../components/graph/KnowledgeGraphView'
 import { GraphSearchBar } from '../components/GraphSearchBar'
+import { SearchResultsPanel } from '../components/graph/SearchResultsPanel'
 import { useGraphData } from '../hooks/useGraphData'
 import type { SearchResult } from '../types/biomedical'
 import './GraphPage.css'
@@ -18,14 +20,22 @@ export function GraphPage() {
     loadNeighborhood,
     search,
     clearSearch,
+    centerEntityId,
   } = useGraphData('biolink')
 
+  const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
+
   const handleSelectResult = (result: SearchResult) => {
+    setSelectedResult(result)
     loadNeighborhood(result.id, 1)
   }
 
   const handleNodeExpand = (entityId: string) => {
     loadNeighborhood(entityId, 1)
+  }
+
+  const handleClosePanel = () => {
+    setSelectedResult(null)
   }
 
   return (
@@ -60,6 +70,18 @@ export function GraphPage() {
           error={error}
           empty={empty}
           onNodeExpand={handleNodeExpand}
+          searchResultsPanel={
+            selectedResult && graph ? (
+              <SearchResultsPanel
+                result={selectedResult}
+                graphNodes={graph.nodes}
+                graphEdges={graph.edges}
+                centerNodeId={centerEntityId}
+                onNodeSelect={handleNodeExpand}
+                onClose={handleClosePanel}
+              />
+            ) : null
+          }
         />
       </main>
 

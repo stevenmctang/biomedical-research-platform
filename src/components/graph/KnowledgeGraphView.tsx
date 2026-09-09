@@ -40,6 +40,7 @@ interface KnowledgeGraphViewProps {
   error: string | null
   empty: boolean
   onNodeExpand: (entityId: string) => void
+  searchResultsPanel?: React.ReactNode
 }
 
 export function KnowledgeGraphView({
@@ -48,6 +49,7 @@ export function KnowledgeGraphView({
   error,
   empty,
   onNodeExpand,
+  searchResultsPanel,
 }: KnowledgeGraphViewProps) {
   return (
     <ReactFlowProvider>
@@ -57,6 +59,7 @@ export function KnowledgeGraphView({
         error={error}
         empty={empty}
         onNodeExpand={onNodeExpand}
+        searchResultsPanel={searchResultsPanel}
       />
     </ReactFlowProvider>
   )
@@ -68,6 +71,7 @@ function KnowledgeGraphInner({
   error,
   empty,
   onNodeExpand,
+  searchResultsPanel,
 }: KnowledgeGraphViewProps) {
   const flowNodes = useMemo(() => (graph ? toFlowNodes(graph) : []), [graph])
   const flowEdges = useMemo(() => (graph ? toFlowEdges(graph) : []), [graph])
@@ -322,6 +326,8 @@ function KnowledgeGraphInner({
       </div>
 
       <div className="kg-hint">Click node to inspect · Click edge for evidence · Double-click to expand</div>
+
+      {searchResultsPanel}
 
       {selectedNode && (
         <GraphDetailPanel
