@@ -69,6 +69,22 @@ interface ApiAssociationDetail {
   evidenceCount: number
 }
 
+interface MonarchAssociation {
+  id: string
+  subject: string
+  subject_label?: string
+  subject_category?: string
+  object: string
+  object_label?: string
+  object_category?: string
+  predicate?: string
+  category?: string
+  has_evidence?: string[]
+  primary_knowledge_source?: string
+  publications?: string[]
+  update_date?: string
+}
+
 function headers(): Record<string, string> {
   return {
     Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -109,6 +125,29 @@ function normalizeEntityType(type: string): BiomedicalEntityType {
 
 function coerceEntityType(type: string): BiomedicalEntityType {
   return (VALID_ENTITY_TYPES.has(type) ? type : 'function') as BiomedicalEntityType
+}
+
+function relationshipFor(predicate?: string, category?: string): string {
+  const relationships: Record<string, string> = {
+    'biolink:has_phenotype': 'has-phenotype',
+    'biolink:expressed_in': 'expressed-in',
+    'biolink:causes': 'causes',
+    'biolink:treats': 'treats',
+    'biolink:actively_involved_in': 'participates-in',
+    'biolink:participates_in': 'participates-in',
+    'biolink:has_participant': 'involves',
+    'biolink:related_to': 'related-to',
+    'biolink:associated_with': 'associated-with',
+    'biolink:genetic_association': 'associated-with',
+    'biolink:target_for': 'targets',
+    'biolink:interacts_with': 'targets',
+  }
+  if (predicate && relationships[predicate]) return relationships[predicate]
+  if (category?.includes('DiseaseToPhenotypicFeature')) return 'has-phenotype'
+  if (category?.includes('DiseaseToGene')) return 'associated-with'
+  if (category?.includes('GeneToPathway')) return 'participates-in'
+  if (category?.includes('ChemicalToDisease')) return 'treats'
+  return 'related-to'
 }
 
 function toGraphNode(entity: ApiEntity): GraphNode {
@@ -203,7 +242,53 @@ export const biolinkProvider: BiomedicalDataProvider = {
     if (!isBiolinkConfigured) {
       const center = await this.getEntity(entityId)
       if (!center) throw new Error(`Entity not found: ${entityId}`)
-      return { center, nodes: [center], edges: [] }
+
+      const response = await fetch(
+        apiUrl(
+          `/entity/${encodeURIComponent(entityId)}/biolink%3AAssociation?limit=500`,
+        ),
+        { headers: headers() },
+      )
+      if (!response.ok) {
+        throw new Error(`Failed to load connected entities (${response.status})`)
+      }
+      const data = (await response.json()) as { items?: MonarchAssociation[] }
+      const associations = data.items ?? []
+      const nodeMap = new Map<string, GraphNode>([[center.id, center]])
+      const edges = associations.map((association) => {
+        const source = association.subject
+        const target = association.object
+        const sourceLabel = association.subject_label ?? source
+        const targetLabel = association.object_label ?? target
+        if (!nodeMap.has(source)) {
+          nodeMap.set(source, {
+            id: source,
+            type: normalizeEntityType(association.subject_category ?? ''),
+            label: sourceLabel,
+          })
+        }
+        if (!nodeMap.has(target)) {
+          nodeMap.set(target, {
+            id: target,
+            type: normalizeEntityType(association.object_category ?? ''),
+            label: targetLabel,
+          })
+        }
+        return {
+          id: association.id,
+          source,
+          target,
+          relationship: relationshipFor(
+            association.predicate,
+            association.category,
+          ) as never,
+          evidenceCodes: association.has_evidence,
+          primaryKnowledgeSource: association.primary_knowledge_source,
+          publications: association.publications,
+          updateDate: association.update_date,
+        }
+      })
+      return { center, nodes: [...nodeMap.values()], edges }
     }
 
     const params = new URLSearchParams({ depth: String(depth) })
