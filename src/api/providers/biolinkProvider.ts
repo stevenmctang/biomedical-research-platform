@@ -11,6 +11,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim()
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 
 export const isBiolinkConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+const MONARCH_PROXY_URL = '/api/monarch'
 
 interface ApiSearchResult {
   results: {
@@ -76,7 +77,9 @@ function headers(): Record<string, string> {
 }
 
 function apiUrl(path: string): string {
-  return `${SUPABASE_URL}/functions/v1/biolink-proxy${path}`
+  return isBiolinkConfigured
+    ? `${SUPABASE_URL}/functions/v1/biolink-proxy${path}`
+    : `${MONARCH_PROXY_URL}${path}`
 }
 
 const VALID_ENTITY_TYPES: Set<string> = new Set([
@@ -89,6 +92,20 @@ const VALID_ENTITY_TYPES: Set<string> = new Set([
   'function',
   'variant',
 ])
+
+function normalizeEntityType(type: string): BiomedicalEntityType {
+  const normalized = type.replace('biolink:', '').toLowerCase()
+  const aliases: Record<string, BiomedicalEntityType> = {
+    smallmolecule: 'drug',
+    drug: 'drug',
+    phenotypicfeature: 'phenotype',
+    anatomicalentity: 'anatomy',
+    biologicalprocess: 'function',
+    molecularactivity: 'function',
+    sequencevariant: 'variant',
+  }
+  return aliases[normalized] ?? coerceEntityType(normalized)
+}
 
 function coerceEntityType(type: string): BiomedicalEntityType {
   return (VALID_ENTITY_TYPES.has(type) ? type : 'function') as BiomedicalEntityType
@@ -132,14 +149,32 @@ export const biolinkProvider: BiomedicalDataProvider = {
       throw new Error(body.error ?? `Search failed (${res.status})`)
     }
 
-    const data = (await res.json()) as ApiSearchResult
+    const data = (await res.json()) as ApiSearchResult & {
+      items?: {
+        id: string
+        category: string
+        name?: string
+        symbol?: string
+        full_name?: string
+        description?: string
+      }[]
+    }
+    if (data.items) {
+      return data.items.map((item) => ({
+        id: item.id,
+        type: normalizeEntityType(item.category),
+        title: item.name || item.symbol || item.id,
+        subtitle: item.full_name ?? item.id,
+        description: item.description ?? '',
+      }))
+    }
     return data.results.map((r) => ({
-      id: r.id,
-      type: coerceEntityType(r.type),
-      title: r.title,
-      subtitle: r.subtitle,
-      description: r.description,
-    }))
+        id: r.id,
+        type: coerceEntityType(r.type),
+        title: r.title,
+        subtitle: r.subtitle,
+        description: r.description,
+      }))
   },
 
   async getEntity(entityId: string): Promise<GraphNode | null> {
@@ -149,8 +184,16 @@ export const biolinkProvider: BiomedicalDataProvider = {
 
     if (!res.ok) return null
 
-    const entity = (await res.json()) as ApiEntity
-    return toGraphNode(entity)
+    const entity = (await res.json()) as ApiEntity & {
+      category?: string
+      name?: string
+      full_name?: string
+    }
+    return toGraphNode({
+      ...entity,
+      type: entity.type ?? normalizeEntityType(entity.category ?? 'function'),
+      label: entity.label ?? entity.name ?? entity.full_name ?? entity.id,
+    })
   },
 
   async getEntityNeighborhood(
