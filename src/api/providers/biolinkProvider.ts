@@ -200,6 +200,12 @@ export const biolinkProvider: BiomedicalDataProvider = {
     entityId: string,
     depth = 1,
   ): Promise<EntityNeighborhood> {
+    if (!isBiolinkConfigured) {
+      const center = await this.getEntity(entityId)
+      if (!center) throw new Error(`Entity not found: ${entityId}`)
+      return { center, nodes: [center], edges: [] }
+    }
+
     const params = new URLSearchParams({ depth: String(depth) })
     const res = await fetch(
       apiUrl(`/neighborhood/${encodeURIComponent(entityId)}?${params.toString()}`),

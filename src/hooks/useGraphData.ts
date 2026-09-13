@@ -20,6 +20,7 @@ interface UseGraphDataState {
 
 export function useGraphData(providerType: DataProviderType = 'biolink') {
   const provider = useRef(createDataProvider(providerType)).current
+  const initialProvider = useRef(createDataProvider('mock')).current
 
   const [state, setState] = useState<UseGraphDataState>({
     graph: null,
@@ -118,7 +119,7 @@ export function useGraphData(providerType: DataProviderType = 'biolink') {
     }))
 
     try {
-      const results = await provider.searchEntities('ALS', undefined, 1)
+      const results = await initialProvider.searchEntities('ALS', undefined, 1)
       if (results.length === 0) {
         setState((s) => ({
           ...s,
@@ -129,7 +130,18 @@ export function useGraphData(providerType: DataProviderType = 'biolink') {
         }))
         return
       }
-      await loadNeighborhood(results[0].id, 1)
+      const hood = await initialProvider.getEntityNeighborhood(results[0].id, 1)
+      const graph: KnowledgeGraph = {
+        nodes: [hood.center, ...hood.nodes.filter((n) => n.id !== hood.center.id)],
+        edges: hood.edges,
+      }
+      setState((s) => ({
+        ...s,
+        graph,
+        loading: false,
+        centerEntityId: results[0].id,
+        empty: graph.nodes.length <= 1 && graph.edges.length === 0,
+      }))
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to load initial data'
@@ -140,7 +152,7 @@ export function useGraphData(providerType: DataProviderType = 'biolink') {
         error: message,
       }))
     }
-  }, [provider, loadNeighborhood])
+  }, [initialProvider])
 
   useEffect(() => {
     loadDefaultGraph()
