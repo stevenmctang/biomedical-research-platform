@@ -14,13 +14,17 @@ import {
 } from 'react-router-dom'
 
 import {
+  ArrowLeft,
   ArrowRight,
-  BookOpen,
   Calendar,
   FolderKanban,
+  FlaskConical,
+  Home as HomeIcon,
+  Lightbulb,
   Network,
   Plus,
   Search,
+  ShieldCheck,
   Sparkles,
   Trash2,
 } from 'lucide-react'
@@ -33,56 +37,66 @@ import {
   Explore,
 } from './pages/Explore'
 
-import {
-  DiseaseExplorer,
-} from './pages/DiseaseExplorer'
-
-import {
-  GeneExplorer,
-} from './pages/GeneExplorer'
-
-import {
-  PathwayExplorer,
-} from './pages/PathwayExplorer'
-
-import {
-  DrugExplorer,
-} from './pages/DrugExplorer'
-
-import {
-  HypothesisExplorer,
-} from './pages/HypothesisExplorer'
-
-import {
-  Auth,
-} from './pages/Auth'
-
-import {
-  AuthCallback,
-} from './pages/AuthCallback'
-
-import {
-  ResearchMapDemo,
-} from './pages/ResearchMapDemo'
-
-import {
-  GraphPage,
-} from './pages/GraphPage'
-
 import './App.css'
 
-interface StoredResearchProject {
+interface ResearchNode {
   id: string
-  title?: string
-  question?: string
-  createdAt?: string
-  updatedAt?: string
-  researchMap?: {
-    domain?: string
-    nodes?: unknown[]
-    edges?: unknown[]
-    sources?: unknown[]
-  }
+  label: string
+  subtitle?: string
+  description?: string
+  type?: string
+  domain?: string
+  evidenceStrength?: string
+  metadata?: Record<string, unknown>
+}
+
+interface ResearchEdge {
+  id: string
+  sourceId: string
+  targetId: string
+  label: string
+  explanation?: string
+  evidenceStrength?: string
+}
+
+interface ResearchMap {
+  question: string
+  domain: string
+  nodes: ResearchNode[]
+  edges: ResearchEdge[]
+}
+
+interface StoredResearchProject {
+  version: 1
+  id: string
+  title: string
+  question: string
+  researchMap: ResearchMap
+  expandedNodeIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+type GraphNodeType =
+  | 'disease'
+  | 'gene'
+  | 'pathway'
+  | 'drug'
+
+interface DiscoveryNode {
+  id: string
+  label: string
+  type: GraphNodeType
+  description: string
+  x: number
+  y: number
+}
+
+interface DiscoveryEdge {
+  id: string
+  sourceId: string
+  targetId: string
+  label: string
 }
 
 const PROJECTS_KEY =
@@ -91,10 +105,193 @@ const PROJECTS_KEY =
 const ACTIVE_PROJECT_ID_KEY =
   'helix.activeProjectId.v1'
 
-function loadStoredProjects() {
+const discoveryNodes: DiscoveryNode[] = [
+  {
+    id: 'als',
+    label: 'ALS',
+    type: 'disease',
+    description:
+      'A neurodegenerative disease affecting motor neurons and movement.',
+    x: 50,
+    y: 18,
+  },
+  {
+    id: 'parkinsons',
+    label: "Parkinson's Disease",
+    type: 'disease',
+    description:
+      'A neurodegenerative disease connected to motor symptoms and protein-related mechanisms.',
+    x: 63,
+    y: 24,
+  },
+  {
+    id: 'sod1',
+    label: 'SOD1',
+    type: 'gene',
+    description:
+      'A gene associated with some inherited forms of ALS.',
+    x: 75,
+    y: 42,
+  },
+  {
+    id: 'fus',
+    label: 'FUS',
+    type: 'gene',
+    description:
+      'A gene linked to RNA biology and some ALS-related research.',
+    x: 82,
+    y: 55,
+  },
+  {
+    id: 'tardbp',
+    label: 'TARDBP',
+    type: 'gene',
+    description:
+      'A gene connected to TDP-43 biology and neurodegeneration research.',
+    x: 77,
+    y: 68,
+  },
+  {
+    id: 'lrrk2',
+    label: 'LRRK2',
+    type: 'gene',
+    description:
+      'A gene strongly studied in Parkinson’s disease research.',
+    x: 63,
+    y: 72,
+  },
+  {
+    id: 'oxidative',
+    label: 'Oxidative Stress',
+    type: 'pathway',
+    description:
+      'A biological stress pathway often studied in neurodegeneration.',
+    x: 41,
+    y: 82,
+  },
+  {
+    id: 'protein',
+    label: 'Protein Homeostasis',
+    type: 'pathway',
+    description:
+      'The system cells use to maintain protein folding, quality control, and clearance.',
+    x: 28,
+    y: 75,
+  },
+  {
+    id: 'amyloid',
+    label: 'Amyloid Processing',
+    type: 'pathway',
+    description:
+      'A pathway relevant to protein aggregation and neurodegenerative disease research.',
+    x: 23,
+    y: 58,
+  },
+  {
+    id: 'riluzole',
+    label: 'Riluzole',
+    type: 'drug',
+    description:
+      'A drug used in ALS care and commonly discussed in therapeutic research.',
+    x: 20,
+    y: 34,
+  },
+  {
+    id: 'edaravone',
+    label: 'Edaravone',
+    type: 'drug',
+    description:
+      'A therapy studied in ALS with connections to oxidative stress.',
+    x: 31,
+    y: 26,
+  },
+]
+
+const discoveryEdges: DiscoveryEdge[] = [
+  {
+    id: 'als-sod1',
+    sourceId: 'als',
+    targetId: 'sod1',
+    label: 'associated with',
+  },
+  {
+    id: 'als-fus',
+    sourceId: 'als',
+    targetId: 'fus',
+    label: 'associated with',
+  },
+  {
+    id: 'als-tardbp',
+    sourceId: 'als',
+    targetId: 'tardbp',
+    label: 'associated with',
+  },
+  {
+    id: 'parkinsons-lrrk2',
+    sourceId: 'parkinsons',
+    targetId: 'lrrk2',
+    label: 'associated with',
+  },
+  {
+    id: 'sod1-oxidative',
+    sourceId: 'sod1',
+    targetId: 'oxidative',
+    label: 'participates in',
+  },
+  {
+    id: 'fus-protein',
+    sourceId: 'fus',
+    targetId: 'protein',
+    label: 'connected to',
+  },
+  {
+    id: 'tardbp-protein',
+    sourceId: 'tardbp',
+    targetId: 'protein',
+    label: 'connected to',
+  },
+  {
+    id: 'lrrk2-protein',
+    sourceId: 'lrrk2',
+    targetId: 'protein',
+    label: 'connected to',
+  },
+  {
+    id: 'protein-amyloid',
+    sourceId: 'protein',
+    targetId: 'amyloid',
+    label: 'overlaps with',
+  },
+  {
+    id: 'riluzole-als',
+    sourceId: 'riluzole',
+    targetId: 'als',
+    label: 'used in',
+  },
+  {
+    id: 'edaravone-als',
+    sourceId: 'edaravone',
+    targetId: 'als',
+    label: 'used in',
+  },
+  {
+    id: 'edaravone-oxidative',
+    sourceId: 'edaravone',
+    targetId: 'oxidative',
+    label: 'related to',
+  },
+]
+
+function canUseStorage() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.localStorage !== 'undefined'
+  )
+}
+
+function readProjects() {
   if (
-    typeof window === 'undefined' ||
-    !window.localStorage
+    !canUseStorage()
   ) {
     return []
   }
@@ -114,7 +311,7 @@ function loadStoredProjects() {
     const parsed =
       JSON.parse(
         raw,
-      )
+      ) as StoredResearchProject[]
 
     if (
       !Array.isArray(
@@ -131,21 +328,25 @@ function loadStoredProjects() {
         Boolean(
           project,
         ) &&
+        project.version ===
+          1 &&
         typeof project.id ===
-          'string',
+          'string' &&
+        Boolean(
+          project.researchMap,
+        ),
     )
   } catch {
     return []
   }
 }
 
-function saveStoredProjects(
+function writeProjects(
   projects:
     StoredResearchProject[],
 ) {
   if (
-    typeof window === 'undefined' ||
-    !window.localStorage
+    !canUseStorage()
   ) {
     return
   }
@@ -158,1115 +359,236 @@ function saveStoredProjects(
   )
 }
 
-function formatProjectDate(
-  value:
-    string | undefined,
+function deleteProject(
+  projectId:
+    string,
 ) {
-  if (
-    !value
-  ) {
-    return 'Recently updated'
-  }
+  const projects =
+    readProjects()
 
-  const date =
-    new Date(
-      value,
-    )
-
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-    return 'Recently updated'
-  }
-
-  return date.toLocaleDateString(
-    undefined,
-    {
-      month:
-        'short',
-
-      day:
-        'numeric',
-
-      year:
-        'numeric',
-    },
-  )
-}
-
-function getProjectTitle(
-  project:
-    StoredResearchProject,
-) {
-  return (
-    project.title ??
-    project.question ??
-    'Untitled investigation'
-  )
-}
-
-function getProjectQuestion(
-  project:
-    StoredResearchProject,
-) {
-  return (
-    project.question ??
-    'No research question saved.'
-  )
-}
-
-function ProjectsPage() {
-  const navigate =
-    useNavigate()
-
-  const [
-    search,
-    setSearch,
-  ] =
-    useState(
-      '',
-    )
-
-  const [
-    projects,
-    setProjects,
-  ] =
-    useState<
-      StoredResearchProject[]
-    >(
-      () =>
-        loadStoredProjects(),
-    )
-
-  const filteredProjects =
-    useMemo(
-      () => {
-        const query =
-          search
-            .trim()
-            .toLowerCase()
-
-        const sortedProjects =
-          [...projects].sort(
-            (
-              first,
-              second,
-            ) => {
-              const firstTime =
-                new Date(
-                  first.updatedAt ??
-                    first.createdAt ??
-                    0,
-                ).getTime()
-
-              const secondTime =
-                new Date(
-                  second.updatedAt ??
-                    second.createdAt ??
-                    0,
-                ).getTime()
-
-              return (
-                secondTime -
-                firstTime
-              )
-            },
-          )
-
-        if (
-          !query
-        ) {
-          return sortedProjects
-        }
-
-        return sortedProjects.filter(
-          (
-            project,
-          ) => {
-            const title =
-              getProjectTitle(
-                project,
-              )
-
-            const question =
-              getProjectQuestion(
-                project,
-              )
-
-            const domain =
-              project.researchMap?.domain ??
-              ''
-
-            return (
-              title
-                .toLowerCase()
-                .includes(
-                  query,
-                ) ||
-              question
-                .toLowerCase()
-                .includes(
-                  query,
-                ) ||
-              domain
-                .toLowerCase()
-                .includes(
-                  query,
-                )
-            )
-          },
-        )
-      },
-      [
-        projects,
-        search,
-      ],
-    )
-
-  const totalConcepts =
-    projects.reduce(
+  writeProjects(
+    projects.filter(
       (
-        total,
         project,
       ) =>
-        total +
-        (
-          project.researchMap
-            ?.nodes
-            ?.length ??
-          0
-        ),
-      0,
-    )
+        project.id !==
+        projectId,
+    ),
+  )
 
-  const totalRelationships =
-    projects.reduce(
-      (
-        total,
-        project,
-      ) =>
-        total +
-        (
-          project.researchMap
-            ?.edges
-            ?.length ??
-          0
-        ),
-      0,
-    )
-
-  function startNewInvestigation() {
+  if (
+    canUseStorage() &&
+    window.localStorage.getItem(
+      ACTIVE_PROJECT_ID_KEY,
+    ) ===
+      projectId
+  ) {
     window.localStorage.removeItem(
       ACTIVE_PROJECT_ID_KEY,
     )
-
-    navigate(
-      '/explore',
-    )
   }
+}
 
-  function openProject(
-    projectId:
-      string,
-  ) {
-    window.localStorage.setItem(
-      ACTIVE_PROJECT_ID_KEY,
-      projectId,
-    )
+function formatDate(
+  value:
+    string,
+) {
+  try {
+    return new Intl.DateTimeFormat(
+      undefined,
+      {
+        month:
+          'short',
 
-    navigate(
-      `/explore/${projectId}`,
+        day:
+          'numeric',
+
+        year:
+          'numeric',
+      },
+    ).format(
+      new Date(
+        value,
+      ),
     )
+  } catch {
+    return 'Recently'
   }
+}
 
-  function deleteProject(
-    project:
-      StoredResearchProject,
-  ) {
-    const title =
-      getProjectTitle(
-        project,
-      )
-
-    const confirmed =
-      window.confirm(
-        `Delete "${title}"? This removes it from this browser only.`,
-      )
-
-    if (
-      !confirmed
-    ) {
-      return
-    }
-
-    const updatedProjects =
-      projects.filter(
-        (
-          candidate,
-        ) =>
-          candidate.id !==
-          project.id,
-      )
-
-    saveStoredProjects(
-      updatedProjects,
-    )
-
-    setProjects(
-      updatedProjects,
-    )
-
-    if (
-      window.localStorage.getItem(
-        ACTIVE_PROJECT_ID_KEY,
-      ) ===
-      project.id
-    ) {
-      window.localStorage.removeItem(
-        ACTIVE_PROJECT_ID_KEY,
-      )
-    }
-  }
-
-  function renameProject(
-    project:
-      StoredResearchProject,
-  ) {
-    const currentTitle =
-      getProjectTitle(
-        project,
-      )
-
-    const nextTitle =
-      window.prompt(
-        'Rename this investigation:',
-        currentTitle,
-      )
-
-    if (
-      nextTitle ===
-      null
-    ) {
-      return
-    }
-
-    const cleaned =
-      nextTitle.trim()
-
-    if (
-      !cleaned
-    ) {
-      return
-    }
-
-    const updatedProjects =
-      projects.map(
-        (
-          candidate,
-        ) =>
-          candidate.id ===
-          project.id
-            ? {
-                ...candidate,
-                title:
-                  cleaned,
-                updatedAt:
-                  new Date().toISOString(),
-              }
-            : candidate,
-      )
-
-    saveStoredProjects(
-      updatedProjects,
-    )
-
-    setProjects(
-      updatedProjects,
-    )
-  }
-
+function getProjectDomain(
+  project:
+    StoredResearchProject,
+) {
   return (
-    <div className="helix-projects-page">
-      <style>
-        {`
-          .helix-projects-page {
-            min-height: 100vh;
-            background:
-              radial-gradient(circle at 12% 4%, rgba(76, 101, 214, 0.13), transparent 30%),
-              radial-gradient(circle at 90% 12%, rgba(40, 90, 140, 0.09), transparent 28%),
-              #f8f7f1;
-            color: #242923;
-          }
-
-          .helix-projects-nav {
-            height: 72px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 18px;
-            padding: 0 36px;
-            border-bottom: 1px solid #e3e6de;
-            background: rgba(248, 247, 241, 0.92);
-            backdrop-filter: blur(16px);
-          }
-
-          .helix-projects-nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-          }
-
-          .helix-projects-nav-link {
-            color: #5d665c;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 700;
-          }
-
-          .helix-projects-nav-link:hover {
-            color: #294ea8;
-          }
-
-          .helix-projects-main {
-            width: min(1180px, calc(100% - 40px));
-            margin: 0 auto;
-            padding: 52px 0 86px;
-          }
-
-          .helix-projects-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 360px;
-            gap: 26px;
-            align-items: stretch;
-            margin-bottom: 26px;
-          }
-
-          .helix-projects-hero-copy {
-            padding: 34px;
-            border: 1px solid #e3e6de;
-            border-radius: 28px;
-            background: rgba(255, 254, 249, 0.75);
-            box-shadow: 0 24px 70px rgba(35, 42, 32, 0.07);
-          }
-
-          .helix-projects-eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: #3655a5;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.7px;
-            text-transform: uppercase;
-          }
-
-          .helix-projects-hero h1 {
-            max-width: 760px;
-            margin: 16px 0 12px;
-            font-size: clamp(38px, 6vw, 68px);
-            line-height: 0.96;
-            letter-spacing: -2.7px;
-          }
-
-          .helix-projects-hero p {
-            max-width: 690px;
-            margin: 0;
-            color: #687066;
-            font-size: 16px;
-            line-height: 1.65;
-          }
-
-          .helix-projects-command-panel {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            gap: 18px;
-            padding: 24px;
-            border: 1px solid #dfe4dc;
-            border-radius: 28px;
-            background: #fffef9;
-            box-shadow: 0 24px 70px rgba(35, 42, 32, 0.08);
-          }
-
-          .helix-projects-command-panel h2 {
-            margin: 0 0 8px;
-            font-size: 22px;
-            letter-spacing: -0.5px;
-          }
-
-          .helix-projects-command-panel p {
-            margin: 0;
-            color: #687066;
-            font-size: 14px;
-            line-height: 1.6;
-          }
-
-          .helix-projects-primary-button,
-          .helix-projects-empty button,
-          .helix-project-continue {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 9px;
-            min-height: 44px;
-            padding: 0 16px;
-            border: 1px solid #253b75;
-            border-radius: 12px;
-            background: #253b75;
-            color: white;
-            font-size: 13px;
-            font-weight: 750;
-            cursor: pointer;
-            white-space: nowrap;
-            text-decoration: none;
-          }
-
-          .helix-projects-primary-button:hover,
-          .helix-projects-empty button:hover,
-          .helix-project-continue:hover {
-            background: #1e3267;
-            border-color: #1e3267;
-          }
-
-          .helix-projects-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-          }
-
-          .helix-projects-stat {
-            padding: 14px;
-            border: 1px solid #edf0e9;
-            border-radius: 18px;
-            background: #fbfbf6;
-          }
-
-          .helix-projects-stat strong {
-            display: block;
-            color: #242923;
-            font-size: 25px;
-            line-height: 1;
-          }
-
-          .helix-projects-stat span {
-            display: block;
-            margin-top: 6px;
-            color: #737b70;
-            font-size: 11px;
-            font-weight: 750;
-            letter-spacing: 0.4px;
-            text-transform: uppercase;
-          }
-
-          .helix-projects-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            margin: 24px 0 20px;
-          }
-
-          .helix-projects-toolbar > span {
-            color: #7b8279;
-            font-size: 13px;
-            font-weight: 700;
-          }
-
-          .helix-projects-search {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-height: 48px;
-            padding: 0 15px;
-            border: 1px solid #e3e6de;
-            border-radius: 15px;
-            background: rgba(255, 254, 249, 0.9);
-            color: #7b8279;
-          }
-
-          .helix-projects-search input {
-            width: 100%;
-            border: 0;
-            outline: 0;
-            background: transparent;
-            color: #242923;
-            font-size: 15px;
-          }
-
-          .helix-project-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
-          }
-
-          .helix-project-card {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            padding: 20px;
-            border: 1px solid #e4e7df;
-            border-radius: 22px;
-            background: rgba(255, 254, 249, 0.94);
-            box-shadow: 0 18px 45px rgba(30, 35, 28, 0.06);
-            transition:
-              transform 180ms ease,
-              box-shadow 180ms ease,
-              border-color 180ms ease;
-          }
-
-          .helix-project-card:hover {
-            transform: translateY(-2px);
-            border-color: #d1d8ff;
-            box-shadow: 0 28px 65px rgba(30, 35, 28, 0.09);
-          }
-
-          .helix-project-card-top {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            gap: 10px;
-          }
-
-          .helix-project-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            width: fit-content;
-            padding: 7px 10px;
-            border-radius: 999px;
-            background: #edf1ff;
-            color: #3655a5;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.4px;
-            text-transform: uppercase;
-          }
-
-          .helix-project-date {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #7b8279;
-            font-size: 12px;
-            font-weight: 650;
-          }
-
-          .helix-project-card h3 {
-            margin: 0;
-            color: #242923;
-            font-size: 23px;
-            line-height: 1.15;
-            letter-spacing: -0.55px;
-          }
-
-          .helix-project-card p {
-            margin: -8px 0 0;
-            color: #687066;
-            font-size: 14px;
-            line-height: 1.6;
-          }
-
-          .helix-project-domain {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            width: fit-content;
-            color: #42503f;
-            font-size: 13px;
-            font-weight: 750;
-          }
-
-          .helix-project-metrics {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-          }
-
-          .helix-project-metric {
-            padding: 11px 10px;
-            border: 1px solid #e8ebe4;
-            border-radius: 15px;
-            background: #fbfbf6;
-          }
-
-          .helix-project-metric strong {
-            display: block;
-            color: #242923;
-            font-size: 18px;
-          }
-
-          .helix-project-metric span {
-            display: block;
-            margin-top: 4px;
-            color: #7b8279;
-            font-size: 11px;
-            font-weight: 700;
-          }
-
-          .helix-project-card-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            padding-top: 4px;
-          }
-
-          .helix-project-secondary-actions {
-            display: flex;
-            gap: 8px;
-          }
-
-          .helix-project-card-actions button {
-            min-height: 38px;
-            padding: 0 11px;
-            border: 1px solid #e4e7df;
-            border-radius: 11px;
-            background: #ffffff;
-            color: #566054;
-            font-size: 12px;
-            font-weight: 750;
-            cursor: pointer;
-          }
-
-          .helix-project-card-actions button:hover {
-            border-color: #cfd6ca;
-            background: #f7f8f3;
-          }
-
-          .helix-project-card-actions .helix-project-danger {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #a64242;
-          }
-
-          .helix-projects-empty {
-            display: grid;
-            place-items: center;
-            text-align: center;
-            padding: 78px 24px;
-            border: 1px solid #e3e6de;
-            border-radius: 26px;
-            background: rgba(255, 254, 249, 0.92);
-            box-shadow: 0 24px 70px rgba(35, 42, 32, 0.06);
-          }
-
-          .helix-projects-empty svg {
-            color: #3655a5;
-          }
-
-          .helix-projects-empty h2 {
-            margin: 16px 0 8px;
-            font-size: 26px;
-            letter-spacing: -0.6px;
-          }
-
-          .helix-projects-empty p {
-            max-width: 470px;
-            margin: 0 0 22px;
-            color: #687066;
-            line-height: 1.6;
-          }
-
-          @media (max-width: 900px) {
-            .helix-projects-hero {
-              grid-template-columns: 1fr;
-            }
-
-            .helix-project-grid {
-              grid-template-columns: 1fr;
-            }
-          }
-
-          @media (max-width: 700px) {
-            .helix-projects-nav {
-              padding: 0 20px;
-            }
-
-            .helix-projects-main {
-              width: min(100% - 28px, 1180px);
-              padding-top: 34px;
-            }
-
-            .helix-projects-hero-copy {
-              padding: 24px;
-            }
-
-            .helix-projects-toolbar {
-              align-items: stretch;
-              flex-direction: column;
-            }
-
-            .helix-projects-stats,
-            .helix-project-metrics {
-              grid-template-columns: 1fr;
-            }
-
-            .helix-project-card-actions {
-              align-items: stretch;
-              flex-direction: column;
-            }
-
-            .helix-project-continue {
-              width: 100%;
-            }
-
-            .helix-project-secondary-actions {
-              width: 100%;
-            }
-
-            .helix-project-secondary-actions button {
-              flex: 1;
-            }
-          }
-        `}
-      </style>
-
-      <header className="helix-projects-nav">
-        <Link
-          to="/"
-          className="helix-wordmark"
-        >
-          Helix
-        </Link>
-
-        <div className="helix-projects-nav-actions">
-          <Link
-            to="/explore"
-            className="helix-projects-nav-link"
-          >
-            Research Explorer
-          </Link>
-
-          <Link
-            to="/hypotheses"
-            className="helix-projects-nav-link"
-          >
-            Hypotheses
-          </Link>
-        </div>
-      </header>
-
-      <main className="helix-projects-main">
-        <section className="helix-projects-hero">
-          <div className="helix-projects-hero-copy">
-            <span className="helix-projects-eyebrow">
-              <FolderKanban size={15} />
-
-              Research library
-            </span>
-
-            <h1>
-              Continue your scientific investigations.
-            </h1>
-
-            <p>
-              Reopen saved research maps, continue exploring concepts,
-              and keep track of evidence-backed investigations from
-              one clean workspace.
-            </p>
-          </div>
-
-          <aside className="helix-projects-command-panel">
-            <div>
-              <h2>
-                Start a new question
-              </h2>
-
-              <p>
-                Create a fresh Helix project and generate a new research
-                map from a scientific question.
-              </p>
-            </div>
-
-            <div className="helix-projects-stats">
-              <div className="helix-projects-stat">
-                <strong>
-                  {
-                    projects.length
-                  }
-                </strong>
-
-                <span>
-                  Projects
-                </span>
-              </div>
-
-              <div className="helix-projects-stat">
-                <strong>
-                  {
-                    totalConcepts
-                  }
-                </strong>
-
-                <span>
-                  Concepts
-                </span>
-              </div>
-
-              <div className="helix-projects-stat">
-                <strong>
-                  {
-                    totalRelationships
-                  }
-                </strong>
-
-                <span>
-                  Links
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="helix-projects-primary-button"
-              onClick={
-                startNewInvestigation
-              }
-            >
-              <Plus size={18} />
-
-              New investigation
-            </button>
-          </aside>
-        </section>
-
-        <section className="helix-projects-toolbar">
-          <div className="helix-projects-search">
-            <Search size={18} />
-
-            <input
-              value={
-                search
-              }
-              onChange={
-                (
-                  event,
-                ) =>
-                  setSearch(
-                    event.target.value,
-                  )
-              }
-              placeholder="Search by question, title, or domain..."
-            />
-          </div>
-
-          <span>
-            {
-              filteredProjects.length
-            }{' '}
-            shown
-          </span>
-        </section>
-
-        {
-          filteredProjects.length >
-            0
-            ? (
-              <section className="helix-project-grid">
-                {
-                  filteredProjects.map(
-                    (
-                      project,
-                    ) => {
-                      const title =
-                        getProjectTitle(
-                          project,
-                        )
-
-                      const question =
-                        getProjectQuestion(
-                          project,
-                        )
-
-                      const conceptCount =
-                        project.researchMap
-                          ?.nodes
-                          ?.length ??
-                        0
-
-                      const sourceCount =
-                        project.researchMap
-                          ?.sources
-                          ?.length ??
-                        0
-
-                      const relationshipCount =
-                        project.researchMap
-                          ?.edges
-                          ?.length ??
-                        0
-
-                      const domain =
-                        project.researchMap
-                          ?.domain ??
-                        'Scientific research'
-
-                      return (
-                        <article
-                          key={
-                            project.id
-                          }
-                          className="helix-project-card"
-                        >
-                          <div className="helix-project-card-top">
-                            <span className="helix-project-badge">
-                              <Sparkles size={13} />
-
-                              Investigation
-                            </span>
-
-                            <span className="helix-project-date">
-                              <Calendar size={13} />
-
-                              {
-                                formatProjectDate(
-                                  project.updatedAt ??
-                                    project.createdAt,
-                                )
-                              }
-                            </span>
-                          </div>
-
-                          <h3>
-                            {
-                              title
-                            }
-                          </h3>
-
-                          <p>
-                            {
-                              question
-                            }
-                          </p>
-
-                          <span className="helix-project-domain">
-                            <Network size={15} />
-
-                            {
-                              domain
-                            }
-                          </span>
-
-                          <div className="helix-project-metrics">
-                            <div className="helix-project-metric">
-                              <strong>
-                                {
-                                  conceptCount
-                                }
-                              </strong>
-
-                              <span>
-                                Concepts
-                              </span>
-                            </div>
-
-                            <div className="helix-project-metric">
-                              <strong>
-                                {
-                                  relationshipCount
-                                }
-                              </strong>
-
-                              <span>
-                                Relationships
-                              </span>
-                            </div>
-
-                            <div className="helix-project-metric">
-                              <strong>
-                                {
-                                  sourceCount
-                                }
-                              </strong>
-
-                              <span>
-                                Sources
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="helix-project-card-actions">
-                            <button
-                              type="button"
-                              className="helix-project-continue"
-                              onClick={
-                                () =>
-                                  openProject(
-                                    project.id,
-                                  )
-                              }
-                            >
-                              Continue
-
-                              <ArrowRight size={15} />
-                            </button>
-
-                            <div className="helix-project-secondary-actions">
-                              <button
-                                type="button"
-                                onClick={
-                                  () =>
-                                    renameProject(
-                                      project,
-                                    )
-                                }
-                              >
-                                Rename
-                              </button>
-
-                              <button
-                                type="button"
-                                className="helix-project-danger"
-                                onClick={
-                                  () =>
-                                    deleteProject(
-                                      project,
-                                    )
-                                }
-                              >
-                                <Trash2 size={13} />
-
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        </article>
-                      )
-                    },
-                  )
-                }
-              </section>
-            )
-            : (
-              <section className="helix-projects-empty">
-                <BookOpen size={36} />
-
-                <h2>
-                  No saved investigations yet
-                </h2>
-
-                <p>
-                  Start a research question and Helix will save the
-                  project locally so you can return to it later.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={
-                    startNewInvestigation
-                  }
-                >
-                  Start researching
-                </button>
-              </section>
-            )
+    project.researchMap.domain ||
+    'Scientific Research'
+  )
+}
+
+function getProjectStats(
+  project:
+    StoredResearchProject,
+) {
+  return {
+    concepts:
+      project.researchMap.nodes.length,
+
+    links:
+      project.researchMap.edges.length,
+
+    expanded:
+      project.expandedNodeIds.length,
+  }
+}
+
+function getGraphNodeColor(
+  type:
+    GraphNodeType,
+) {
+  if (
+    type ===
+    'disease'
+  ) {
+    return {
+      fill:
+        '#eaf0ff',
+
+      stroke:
+        '#6d8df5',
+
+      text:
+        '#253b75',
+    }
+  }
+
+  if (
+    type ===
+    'gene'
+  ) {
+    return {
+      fill:
+        '#e6fbf1',
+
+      stroke:
+        '#55b98b',
+
+      text:
+        '#146b4a',
+    }
+  }
+
+  if (
+    type ===
+    'pathway'
+  ) {
+    return {
+      fill:
+        '#fff3d8',
+
+      stroke:
+        '#e2a83d',
+
+      text:
+        '#815a12',
+    }
+  }
+
+  return {
+    fill:
+      '#f4eaff',
+
+    stroke:
+      '#9b65df',
+
+    text:
+      '#5d2f9b',
+  }
+}
+
+function getGraphTypeLabel(
+  type:
+    GraphNodeType,
+) {
+  if (
+    type ===
+    'disease'
+  ) {
+    return 'Disease'
+  }
+
+  if (
+    type ===
+    'gene'
+  ) {
+    return 'Gene'
+  }
+
+  if (
+    type ===
+    'pathway'
+  ) {
+    return 'Pathway'
+  }
+
+  return 'Drug'
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <Home />
         }
-      </main>
-    </div>
+      />
+
+      <Route
+        path="/explore"
+        element={
+          <Explore />
+        }
+      />
+
+      <Route
+        path="/explore/:projectId"
+        element={
+          <Explore />
+        }
+      />
+
+      <Route
+        path="/projects"
+        element={
+          <ProjectsPage />
+        }
+      />
+
+      <Route
+        path="/graph"
+        element={
+          <DiscoveryGraphPage />
+        }
+      />
+
+      <Route
+        path="/hypotheses"
+        element={
+          <HypothesesPage />
+        }
+      />
+
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to="/"
+            replace
+          />
+        }
+      />
+    </Routes>
   )
 }
 
@@ -1285,27 +607,23 @@ function ExploreProjectsShortcut() {
   return (
     <Link
       to="/projects"
-      aria-label="Open saved projects"
       style={{
         position:
           'fixed',
 
-        top:
-          112,
-
         right:
-          28,
+          22,
+
+        bottom:
+          22,
 
         zIndex:
-          9999,
+          80,
 
         display:
           'inline-flex',
 
         alignItems:
-          'center',
-
-        justifyContent:
           'center',
 
         gap:
@@ -1315,31 +633,31 @@ function ExploreProjectsShortcut() {
           44,
 
         padding:
-          '0 15px',
-
-        border:
-          '1px solid #d9ddd4',
+          '0 16px',
 
         borderRadius:
-          13,
+          999,
+
+        border:
+          '1px solid #dfe4dc',
 
         background:
-          'rgba(255, 254, 249, 0.96)',
+          'rgba(255, 254, 249, 0.94)',
 
         color:
-          '#242923',
+          '#253b75',
 
         textDecoration:
           'none',
 
         fontSize:
-          14,
+          13,
 
         fontWeight:
-          750,
+          850,
 
         boxShadow:
-          '0 16px 40px rgba(26, 31, 24, 0.08)',
+          '0 18px 45px rgba(29, 36, 27, 0.12)',
 
         backdropFilter:
           'blur(14px)',
@@ -1352,88 +670,1925 @@ function ExploreProjectsShortcut() {
   )
 }
 
-function AppRoutes() {
+function ProjectsPage() {
+  const navigate =
+    useNavigate()
+
+  const [
+    projects,
+    setProjects,
+  ] =
+    useState<
+      StoredResearchProject[]
+    >(
+      () =>
+        readProjects(),
+    )
+
+  const [
+    searchTerm,
+    setSearchTerm,
+  ] =
+    useState(
+      '',
+    )
+
+  const filteredProjects =
+    useMemo(
+      () => {
+        const query =
+          searchTerm
+            .trim()
+            .toLowerCase()
+
+        if (
+          !query
+        ) {
+          return projects
+        }
+
+        return projects.filter(
+          (
+            project,
+          ) =>
+            project.title
+              .toLowerCase()
+              .includes(
+                query,
+              ) ||
+            project.question
+              .toLowerCase()
+              .includes(
+                query,
+              ) ||
+            getProjectDomain(
+              project,
+            )
+              .toLowerCase()
+              .includes(
+                query,
+              ),
+        )
+      },
+      [
+        projects,
+        searchTerm,
+      ],
+    )
+
+  function handleDelete(
+    projectId:
+      string,
+  ) {
+    deleteProject(
+      projectId,
+    )
+
+    setProjects(
+      readProjects(),
+    )
+  }
+
+  function handleContinue(
+    projectId:
+      string,
+  ) {
+    if (
+      canUseStorage()
+    ) {
+      window.localStorage.setItem(
+        ACTIVE_PROJECT_ID_KEY,
+        projectId,
+      )
+    }
+
+    navigate(
+      `/explore/${projectId}`,
+    )
+  }
+
   return (
-    <>
-      <ExploreProjectsShortcut />
-
-      <Routes>
-        <Route
-          path="/"
-          element={<Home />}
-        />
-
-        <Route
-          path="/auth"
-          element={<Auth />}
-        />
-
-        <Route
-          path="/auth/callback"
-          element={<AuthCallback />}
-        />
-
-        <Route
-          path="/projects"
-          element={<ProjectsPage />}
-        />
-
-        <Route
-          path="/explore"
-          element={<Explore />}
-        />
-
-        <Route
-          path="/explore/:projectId"
-          element={<Explore />}
-        />
-
-        <Route
-          path="/research-map"
-          element={<ResearchMapDemo />}
-        />
-
-        <Route
-          path="/graph"
-          element={<GraphPage />}
-        />
-
-        <Route
-          path="/disease/:id"
-          element={<DiseaseExplorer />}
-        />
-
-        <Route
-          path="/gene/:id"
-          element={<GeneExplorer />}
-        />
-
-        <Route
-          path="/pathway/:id"
-          element={<PathwayExplorer />}
-        />
-
-        <Route
-          path="/drug/:id"
-          element={<DrugExplorer />}
-        />
-
-        <Route
-          path="/hypotheses"
-          element={<HypothesisExplorer />}
-        />
-
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
+    <div className="helix-projects-page">
+      <style>
+        {`
+          .helix-projects-page {
+            min-height: 100vh;
+            background:
+              radial-gradient(circle at 16% 6%, rgba(74, 101, 219, 0.14), transparent 32%),
+              radial-gradient(circle at 88% 14%, rgba(45, 98, 130, 0.1), transparent 30%),
+              #f8f7f1;
+            color: #232822;
           }
-        />
-      </Routes>
-    </>
+
+          .helix-projects-header {
+            width: min(1220px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 28px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .helix-projects-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #20251f;
+            text-decoration: none;
+            font-size: 21px;
+            font-weight: 900;
+            letter-spacing: -0.7px;
+          }
+
+          .helix-projects-brand span {
+            color: #8c9488;
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .helix-projects-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .helix-projects-nav a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 0 14px;
+            border: 1px solid #dfe4dc;
+            border-radius: 14px;
+            background: rgba(255, 254, 249, 0.82);
+            color: #242923;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 800;
+          }
+
+          .helix-projects-main {
+            width: min(1220px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 34px 0 72px;
+          }
+
+          .helix-projects-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 18px;
+            margin-bottom: 20px;
+          }
+
+          .helix-projects-copy,
+          .helix-projects-summary {
+            border: 1px solid #dfe4dc;
+            border-radius: 30px;
+            background: rgba(255, 254, 249, 0.9);
+            box-shadow: 0 24px 70px rgba(29, 36, 27, 0.07);
+          }
+
+          .helix-projects-copy {
+            padding: 30px;
+          }
+
+          .helix-projects-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #3655a5;
+            font-size: 12px;
+            font-weight: 850;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+          }
+
+          .helix-projects-copy h1 {
+            max-width: 820px;
+            margin: 16px 0 10px;
+            color: #20251f;
+            font-size: clamp(42px, 7vw, 76px);
+            line-height: 0.95;
+            letter-spacing: -3.2px;
+          }
+
+          .helix-projects-copy p {
+            max-width: 720px;
+            margin: 0;
+            color: #657062;
+            font-size: 16px;
+            line-height: 1.7;
+          }
+
+          .helix-projects-summary {
+            padding: 24px;
+            display: grid;
+            align-content: center;
+            gap: 16px;
+          }
+
+          .helix-projects-summary strong {
+            color: #20251f;
+            font-size: 34px;
+            line-height: 1;
+          }
+
+          .helix-projects-summary span {
+            color: #657062;
+            font-size: 13px;
+            font-weight: 750;
+          }
+
+          .helix-projects-create {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            min-height: 46px;
+            padding: 0 16px;
+            border: 1px solid #253b75;
+            border-radius: 15px;
+            background: #253b75;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 850;
+          }
+
+          .helix-projects-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin: 22px 0;
+          }
+
+          .helix-projects-search {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 50px;
+            padding: 0 15px;
+            border: 1px solid #dfe4dc;
+            border-radius: 16px;
+            background: rgba(255, 254, 249, 0.88);
+          }
+
+          .helix-projects-search svg {
+            color: #3655a5;
+          }
+
+          .helix-projects-search input {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #232822;
+            font-size: 15px;
+          }
+
+          .helix-project-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+          }
+
+          .helix-project-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+            padding: 20px;
+            border: 1px solid #dfe4dc;
+            border-radius: 24px;
+            background: rgba(255, 254, 249, 0.92);
+            box-shadow: 0 20px 60px rgba(29, 36, 27, 0.06);
+          }
+
+          .helix-project-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+          }
+
+          .helix-project-domain {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            width: fit-content;
+            padding: 7px 9px;
+            border-radius: 999px;
+            background: #edf1ff;
+            color: #3655a5;
+            font-size: 11px;
+            font-weight: 850;
+            text-transform: uppercase;
+          }
+
+          .helix-project-delete {
+            display: grid;
+            place-items: center;
+            width: 36px;
+            height: 36px;
+            border: 1px solid #eadfd8;
+            border-radius: 12px;
+            background: #fff6f1;
+            color: #a14e27;
+            cursor: pointer;
+          }
+
+          .helix-project-card h2 {
+            margin: 18px 0 10px;
+            color: #20251f;
+            font-size: 23px;
+            line-height: 1.12;
+            letter-spacing: -0.7px;
+          }
+
+          .helix-project-question {
+            margin: 0;
+            color: #657062;
+            font-size: 13px;
+            line-height: 1.55;
+          }
+
+          .helix-project-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin: 18px 0;
+          }
+
+          .helix-project-stat {
+            padding: 10px;
+            border: 1px solid #e7ebe3;
+            border-radius: 14px;
+            background: #fbfbf6;
+          }
+
+          .helix-project-stat strong {
+            display: block;
+            color: #20251f;
+            font-size: 18px;
+          }
+
+          .helix-project-stat span {
+            display: block;
+            margin-top: 3px;
+            color: #757e71;
+            font-size: 10px;
+            font-weight: 850;
+            text-transform: uppercase;
+          }
+
+          .helix-project-card-footer {
+            margin-top: auto;
+            display: grid;
+            gap: 12px;
+          }
+
+          .helix-project-date {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #737b70;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .helix-project-continue {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+            border: 1px solid #253b75;
+            border-radius: 14px;
+            background: #253b75;
+            color: white;
+            font-size: 13px;
+            font-weight: 850;
+            cursor: pointer;
+          }
+
+          .helix-empty-projects {
+            padding: 42px;
+            border: 1px solid #dfe4dc;
+            border-radius: 28px;
+            background: rgba(255, 254, 249, 0.9);
+            text-align: center;
+          }
+
+          .helix-empty-projects h2 {
+            margin: 12px 0 8px;
+            color: #20251f;
+            font-size: 30px;
+            letter-spacing: -1px;
+          }
+
+          .helix-empty-projects p {
+            max-width: 540px;
+            margin: 0 auto 20px;
+            color: #657062;
+            line-height: 1.6;
+          }
+
+          @media (max-width: 980px) {
+            .helix-projects-hero {
+              grid-template-columns: 1fr;
+            }
+
+            .helix-project-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+
+          @media (max-width: 650px) {
+            .helix-projects-header,
+            .helix-projects-main {
+              width: min(100% - 28px, 1220px);
+            }
+
+            .helix-projects-header,
+            .helix-projects-toolbar {
+              align-items: stretch;
+              flex-direction: column;
+            }
+
+            .helix-projects-nav {
+              flex-wrap: wrap;
+            }
+
+            .helix-project-grid {
+              grid-template-columns: 1fr;
+            }
+          }
+        `}
+      </style>
+
+      <header className="helix-projects-header">
+        <Link
+          to="/"
+          className="helix-projects-brand"
+        >
+          Helix
+
+          <span>
+            /
+          </span>
+
+          Projects
+        </Link>
+
+        <nav className="helix-projects-nav">
+          <Link to="/">
+            <HomeIcon size={16} />
+
+            Home
+          </Link>
+
+          <Link to="/graph">
+            <Network size={16} />
+
+            Discovery Graph
+          </Link>
+
+          <Link to="/explore">
+            <Plus size={16} />
+
+            New Investigation
+          </Link>
+        </nav>
+      </header>
+
+      <main className="helix-projects-main">
+        <section className="helix-projects-hero">
+          <div className="helix-projects-copy">
+            <span className="helix-projects-eyebrow">
+              <FolderKanban size={16} />
+
+              Saved investigations
+            </span>
+
+            <h1>
+              Continue your research where you left off.
+            </h1>
+
+            <p>
+              Projects save your research question, generated concept map,
+              expanded nodes, and investigation state locally in your browser.
+            </p>
+          </div>
+
+          <aside className="helix-projects-summary">
+            <div>
+              <strong>
+                {
+                  projects.length
+                }
+              </strong>
+
+              <span>
+                Saved research projects
+              </span>
+            </div>
+
+            <Link
+              to="/explore"
+              className="helix-projects-create"
+            >
+              <Plus size={17} />
+
+              Start new research
+            </Link>
+          </aside>
+        </section>
+
+        <div className="helix-projects-toolbar">
+          <label className="helix-projects-search">
+            <Search size={18} />
+
+            <input
+              value={
+                searchTerm
+              }
+              onChange={
+                (
+                  event,
+                ) =>
+                  setSearchTerm(
+                    event.target.value,
+                  )
+              }
+              placeholder="Search projects by title, question, or domain..."
+            />
+          </label>
+        </div>
+
+        {
+          filteredProjects.length >
+            0
+            ? (
+              <section className="helix-project-grid">
+                {
+                  filteredProjects.map(
+                    (
+                      project,
+                    ) => {
+                      const stats =
+                        getProjectStats(
+                          project,
+                        )
+
+                      return (
+                        <article
+                          key={
+                            project.id
+                          }
+                          className="helix-project-card"
+                        >
+                          <div className="helix-project-card-top">
+                            <span className="helix-project-domain">
+                              <Sparkles size={13} />
+
+                              {
+                                getProjectDomain(
+                                  project,
+                                )
+                              }
+                            </span>
+
+                            <button
+                              type="button"
+                              className="helix-project-delete"
+                              aria-label={`Delete ${project.title}`}
+                              onClick={
+                                () =>
+                                  handleDelete(
+                                    project.id,
+                                  )
+                              }
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+
+                          <h2>
+                            {
+                              project.title
+                            }
+                          </h2>
+
+                          <p className="helix-project-question">
+                            {
+                              project.question
+                            }
+                          </p>
+
+                          <div className="helix-project-stats">
+                            <div className="helix-project-stat">
+                              <strong>
+                                {
+                                  stats.concepts
+                                }
+                              </strong>
+
+                              <span>
+                                Concepts
+                              </span>
+                            </div>
+
+                            <div className="helix-project-stat">
+                              <strong>
+                                {
+                                  stats.links
+                                }
+                              </strong>
+
+                              <span>
+                                Links
+                              </span>
+                            </div>
+
+                            <div className="helix-project-stat">
+                              <strong>
+                                {
+                                  stats.expanded
+                                }
+                              </strong>
+
+                              <span>
+                                Expanded
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="helix-project-card-footer">
+                            <span className="helix-project-date">
+                              <Calendar size={14} />
+
+                              Updated {
+                                formatDate(
+                                  project.updatedAt,
+                                )
+                              }
+                            </span>
+
+                            <button
+                              type="button"
+                              className="helix-project-continue"
+                              onClick={
+                                () =>
+                                  handleContinue(
+                                    project.id,
+                                  )
+                              }
+                            >
+                              Continue investigation
+
+                              <ArrowRight size={16} />
+                            </button>
+                          </div>
+                        </article>
+                      )
+                    },
+                  )
+                }
+              </section>
+            )
+            : (
+              <section className="helix-empty-projects">
+                <FolderKanban size={34} />
+
+                <h2>
+                  No saved projects yet.
+                </h2>
+
+                <p>
+                  Start a research question in the Explorer. Helix will
+                  save your investigation so you can come back to it later.
+                </p>
+
+                <Link
+                  to="/explore"
+                  className="helix-projects-create"
+                >
+                  <Plus size={17} />
+
+                  Start first project
+                </Link>
+              </section>
+            )
+        }
+      </main>
+    </div>
+  )
+}
+
+function DiscoveryGraphPage() {
+  const navigate =
+    useNavigate()
+
+  const [
+    selectedNodeId,
+    setSelectedNodeId,
+  ] =
+    useState(
+      'als',
+    )
+
+  const selectedNode =
+    discoveryNodes.find(
+      (
+        node,
+      ) =>
+        node.id ===
+        selectedNodeId,
+    ) ??
+    discoveryNodes[0]
+
+  const connectedEdges =
+    discoveryEdges.filter(
+      (
+        edge,
+      ) =>
+        edge.sourceId ===
+          selectedNode.id ||
+        edge.targetId ===
+          selectedNode.id,
+    )
+
+  const connectedNodes =
+    connectedEdges
+      .map(
+        (
+          edge,
+        ) => {
+          const otherId =
+            edge.sourceId ===
+            selectedNode.id
+              ? edge.targetId
+              : edge.sourceId
+
+          return discoveryNodes.find(
+            (
+              node,
+            ) =>
+              node.id ===
+              otherId,
+          )
+        },
+      )
+      .filter(
+        (
+          node,
+        ): node is DiscoveryNode =>
+          Boolean(
+            node,
+          ),
+      )
+
+  function startInvestigation() {
+    navigate(
+      '/explore',
+    )
+  }
+
+  return (
+    <div className="helix-discovery-page">
+      <style>
+        {`
+          .helix-discovery-page {
+            min-height: 100vh;
+            background:
+              radial-gradient(circle at 14% 6%, rgba(74, 101, 219, 0.14), transparent 32%),
+              radial-gradient(circle at 88% 14%, rgba(45, 98, 130, 0.1), transparent 30%),
+              #f8f7f1;
+            color: #232822;
+          }
+
+          .helix-discovery-header {
+            width: min(1280px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+          }
+
+          .helix-discovery-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #20251f;
+            text-decoration: none;
+            font-size: 21px;
+            font-weight: 900;
+            letter-spacing: -0.7px;
+          }
+
+          .helix-discovery-brand span {
+            color: #8c9488;
+            font-size: 15px;
+            font-weight: 700;
+          }
+
+          .helix-discovery-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 0 14px;
+            border: 1px solid #dfe4dc;
+            border-radius: 14px;
+            background: rgba(255, 254, 249, 0.82);
+            color: #242923;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 800;
+          }
+
+          .helix-discovery-main {
+            width: min(1280px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 24px 0 64px;
+          }
+
+          .helix-discovery-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 18px;
+            margin-bottom: 18px;
+          }
+
+          .helix-discovery-copy,
+          .helix-discovery-stats,
+          .helix-discovery-panel,
+          .helix-discovery-graph-card {
+            border: 1px solid #dfe4dc;
+            background: rgba(255, 254, 249, 0.92);
+            box-shadow: 0 24px 70px rgba(29, 36, 27, 0.07);
+          }
+
+          .helix-discovery-copy {
+            padding: 30px;
+            border-radius: 30px;
+          }
+
+          .helix-discovery-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #3655a5;
+            font-size: 12px;
+            font-weight: 850;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+          }
+
+          .helix-discovery-copy h1 {
+            max-width: 900px;
+            margin: 16px 0 10px;
+            color: #20251f;
+            font-size: clamp(42px, 7vw, 76px);
+            line-height: 0.95;
+            letter-spacing: -3.2px;
+          }
+
+          .helix-discovery-copy p {
+            max-width: 760px;
+            margin: 0;
+            color: #657062;
+            font-size: 16px;
+            line-height: 1.7;
+          }
+
+          .helix-discovery-stats {
+            display: grid;
+            align-content: center;
+            gap: 12px;
+            padding: 24px;
+            border-radius: 30px;
+          }
+
+          .helix-discovery-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .helix-discovery-stat {
+            padding: 14px;
+            border: 1px solid #e7ebe3;
+            border-radius: 17px;
+            background: #fbfbf6;
+          }
+
+          .helix-discovery-stat strong {
+            display: block;
+            color: #20251f;
+            font-size: 26px;
+            line-height: 1;
+          }
+
+          .helix-discovery-stat span {
+            display: block;
+            margin-top: 7px;
+            color: #727a6f;
+            font-size: 10px;
+            font-weight: 850;
+            text-transform: uppercase;
+          }
+
+          .helix-discovery-layout {
+            display: grid;
+            grid-template-columns: 330px minmax(0, 1fr);
+            gap: 18px;
+            align-items: stretch;
+          }
+
+          .helix-discovery-panel {
+            border-radius: 28px;
+            padding: 22px;
+          }
+
+          .helix-node-type-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            width: fit-content;
+            padding: 7px 9px;
+            border-radius: 999px;
+            background: #edf1ff;
+            color: #3655a5;
+            font-size: 11px;
+            font-weight: 850;
+            text-transform: uppercase;
+          }
+
+          .helix-discovery-panel h2 {
+            margin: 18px 0 10px;
+            color: #20251f;
+            font-size: 31px;
+            line-height: 1.05;
+            letter-spacing: -1.1px;
+          }
+
+          .helix-discovery-panel p {
+            margin: 0;
+            color: #657062;
+            font-size: 14px;
+            line-height: 1.6;
+          }
+
+          .helix-connected-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 20px;
+          }
+
+          .helix-connected-list h3 {
+            margin: 0 0 2px;
+            color: #20251f;
+            font-size: 15px;
+          }
+
+          .helix-connected-button {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e7ebe3;
+            border-radius: 16px;
+            background: #fbfbf6;
+            color: #20251f;
+            text-align: left;
+            cursor: pointer;
+          }
+
+          .helix-connected-button strong {
+            display: block;
+            font-size: 13px;
+          }
+
+          .helix-connected-button span {
+            display: block;
+            margin-top: 3px;
+            color: #727a6f;
+            font-size: 11px;
+            font-weight: 750;
+            text-transform: uppercase;
+          }
+
+          .helix-discovery-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            min-height: 44px;
+            width: 100%;
+            margin-top: 20px;
+            border: 1px solid #253b75;
+            border-radius: 15px;
+            background: #253b75;
+            color: white;
+            font-size: 13px;
+            font-weight: 850;
+            cursor: pointer;
+          }
+
+          .helix-discovery-graph-card {
+            position: relative;
+            min-height: 620px;
+            overflow: hidden;
+            border-radius: 28px;
+            background:
+              radial-gradient(circle at 50% 42%, rgba(71, 99, 180, 0.14), transparent 30%),
+              linear-gradient(145deg, rgba(255, 254, 249, 0.98), rgba(242, 244, 238, 0.96));
+          }
+
+          .helix-discovery-legend {
+            position: absolute;
+            left: 18px;
+            top: 18px;
+            z-index: 3;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid #dfe4dc;
+            border-radius: 16px;
+            background: rgba(255, 254, 249, 0.92);
+            box-shadow: 0 16px 36px rgba(29, 36, 27, 0.08);
+          }
+
+          .helix-discovery-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #5f685d;
+            font-size: 12px;
+            font-weight: 800;
+          }
+
+          .helix-discovery-legend i {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: block;
+          }
+
+          .legend-disease {
+            background: #6d8df5;
+          }
+
+          .legend-gene {
+            background: #55b98b;
+          }
+
+          .legend-pathway {
+            background: #e2a83d;
+          }
+
+          .legend-drug {
+            background: #9b65df;
+          }
+
+          .helix-discovery-graph-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+          }
+
+          .helix-graph-grid {
+            stroke: rgba(100, 108, 95, 0.08);
+            stroke-width: 1;
+          }
+
+          .helix-graph-edge {
+            stroke: rgba(81, 91, 78, 0.35);
+            stroke-width: 1.4;
+            stroke-dasharray: 6 7;
+          }
+
+          .helix-graph-edge-active {
+            stroke: #253b75;
+            stroke-width: 2.2;
+            stroke-dasharray: 0;
+          }
+
+          .helix-graph-edge-label {
+            fill: #657062;
+            font-size: 10px;
+            font-weight: 750;
+          }
+
+          .helix-graph-node {
+            cursor: pointer;
+          }
+
+          .helix-graph-node rect {
+            transition:
+              filter 170ms ease,
+              transform 170ms ease;
+          }
+
+          .helix-graph-node:hover rect,
+          .helix-graph-node-active rect {
+            filter: drop-shadow(0 12px 18px rgba(29, 36, 27, 0.16));
+          }
+
+          .helix-graph-node-label {
+            font-size: 12px;
+            font-weight: 850;
+            fill: #20251f;
+            pointer-events: none;
+          }
+
+          .helix-graph-node-type {
+            font-size: 8px;
+            font-weight: 850;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            pointer-events: none;
+          }
+
+          .helix-discovery-footer {
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            bottom: 18px;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border: 1px solid #dfe4dc;
+            border-radius: 16px;
+            background: rgba(255, 254, 249, 0.92);
+            color: #657062;
+            font-size: 12px;
+            font-weight: 750;
+          }
+
+          .helix-discovery-footer strong {
+            color: #253b75;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+          }
+
+          @media (max-width: 1050px) {
+            .helix-discovery-hero,
+            .helix-discovery-layout {
+              grid-template-columns: 1fr;
+            }
+
+            .helix-discovery-panel {
+              order: 2;
+            }
+          }
+
+          @media (max-width: 650px) {
+            .helix-discovery-header,
+            .helix-discovery-main {
+              width: min(100% - 28px, 1280px);
+            }
+
+            .helix-discovery-header {
+              align-items: stretch;
+              flex-direction: column;
+            }
+
+            .helix-discovery-graph-card {
+              min-height: 720px;
+            }
+
+            .helix-discovery-footer {
+              align-items: flex-start;
+              flex-direction: column;
+            }
+          }
+        `}
+      </style>
+
+      <header className="helix-discovery-header">
+        <Link
+          to="/"
+          className="helix-discovery-brand"
+        >
+          Helix
+
+          <span>
+            /
+          </span>
+
+          Discovery Graph
+        </Link>
+
+        <Link
+          to="/"
+          className="helix-discovery-back"
+        >
+          <ArrowLeft size={16} />
+
+          Back home
+        </Link>
+      </header>
+
+      <main className="helix-discovery-main">
+        <section className="helix-discovery-hero">
+          <div className="helix-discovery-copy">
+            <span className="helix-discovery-eyebrow">
+              <Network size={16} />
+
+              Scientific network
+            </span>
+
+            <h1>
+              Explore the broader research network.
+            </h1>
+
+            <p>
+              The Research Explorer starts with one question. The Discovery
+              Graph shows the larger scientific network behind many
+              investigations, connecting diseases, genes, pathways, drugs,
+              and evidence areas.
+            </p>
+          </div>
+
+          <aside className="helix-discovery-stats">
+            <div className="helix-discovery-stat-grid">
+              <div className="helix-discovery-stat">
+                <strong>
+                  {
+                    discoveryNodes.length
+                  }
+                </strong>
+
+                <span>
+                  Demo nodes
+                </span>
+              </div>
+
+              <div className="helix-discovery-stat">
+                <strong>
+                  {
+                    discoveryEdges.length
+                  }
+                </strong>
+
+                <span>
+                  Links
+                </span>
+              </div>
+
+              <div className="helix-discovery-stat">
+                <strong>
+                  4
+                </strong>
+
+                <span>
+                  Node types
+                </span>
+              </div>
+
+              <div className="helix-discovery-stat">
+                <strong>
+                  1
+                </strong>
+
+                <span>
+                  Network
+                </span>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="helix-discovery-layout">
+          <aside className="helix-discovery-panel">
+            <span className="helix-node-type-pill">
+              <Sparkles size={13} />
+
+              {
+                getGraphTypeLabel(
+                  selectedNode.type,
+                )
+              }
+            </span>
+
+            <h2>
+              {
+                selectedNode.label
+              }
+            </h2>
+
+            <p>
+              {
+                selectedNode.description
+              }
+            </p>
+
+            <div className="helix-connected-list">
+              <h3>
+                Connected concepts
+              </h3>
+
+              {
+                connectedNodes.map(
+                  (
+                    node,
+                  ) => (
+                    <button
+                      key={
+                        node.id
+                      }
+                      type="button"
+                      className="helix-connected-button"
+                      onClick={
+                        () =>
+                          setSelectedNodeId(
+                            node.id,
+                          )
+                      }
+                    >
+                      <div>
+                        <strong>
+                          {
+                            node.label
+                          }
+                        </strong>
+
+                        <span>
+                          {
+                            getGraphTypeLabel(
+                              node.type,
+                            )
+                          }
+                        </span>
+                      </div>
+
+                      <ArrowRight size={15} />
+                    </button>
+                  ),
+                )
+              }
+            </div>
+
+            <button
+              type="button"
+              className="helix-discovery-action"
+              onClick={
+                startInvestigation
+              }
+            >
+              Start investigation
+
+              <ArrowRight size={16} />
+            </button>
+          </aside>
+
+          <section className="helix-discovery-graph-card">
+            <div className="helix-discovery-legend">
+              <span>
+                <i className="legend-disease" />
+
+                Disease
+              </span>
+
+              <span>
+                <i className="legend-gene" />
+
+                Gene
+              </span>
+
+              <span>
+                <i className="legend-pathway" />
+
+                Pathway
+              </span>
+
+              <span>
+                <i className="legend-drug" />
+
+                Drug
+              </span>
+            </div>
+
+            <svg
+              className="helix-discovery-graph-svg"
+              viewBox="0 0 1000 660"
+              preserveAspectRatio="xMidYMid meet"
+              role="img"
+              aria-label="Scientific discovery graph showing relationships between diseases, genes, pathways, and drugs."
+            >
+              {
+                Array.from(
+                  {
+                    length:
+                      18,
+                  },
+                  (
+                    _,
+                    index,
+                  ) => (
+                    <line
+                      key={`vertical-${index}`}
+                      className="helix-graph-grid"
+                      x1={
+                        40 +
+                        index *
+                          54
+                      }
+                      y1="40"
+                      x2={
+                        40 +
+                        index *
+                          54
+                      }
+                      y2="620"
+                    />
+                  ),
+                )
+              }
+
+              {
+                Array.from(
+                  {
+                    length:
+                      11,
+                  },
+                  (
+                    _,
+                    index,
+                  ) => (
+                    <line
+                      key={`horizontal-${index}`}
+                      className="helix-graph-grid"
+                      x1="40"
+                      y1={
+                        50 +
+                        index *
+                          54
+                      }
+                      x2="960"
+                      y2={
+                        50 +
+                        index *
+                          54
+                      }
+                    />
+                  ),
+                )
+              }
+
+              {
+                discoveryEdges.map(
+                  (
+                    edge,
+                  ) => {
+                    const source =
+                      discoveryNodes.find(
+                        (
+                          node,
+                        ) =>
+                          node.id ===
+                          edge.sourceId,
+                      )
+
+                    const target =
+                      discoveryNodes.find(
+                        (
+                          node,
+                        ) =>
+                          node.id ===
+                          edge.targetId,
+                      )
+
+                    if (
+                      !source ||
+                      !target
+                    ) {
+                      return null
+                    }
+
+                    const active =
+                      edge.sourceId ===
+                        selectedNode.id ||
+                      edge.targetId ===
+                        selectedNode.id
+
+                    const sourceX =
+                      source.x *
+                      10
+
+                    const sourceY =
+                      source.y *
+                      6.6
+
+                    const targetX =
+                      target.x *
+                      10
+
+                    const targetY =
+                      target.y *
+                      6.6
+
+                    const midX =
+                      (
+                        sourceX +
+                        targetX
+                      ) /
+                      2
+
+                    const midY =
+                      (
+                        sourceY +
+                        targetY
+                      ) /
+                      2
+
+                    return (
+                      <g key={edge.id}>
+                        <line
+                          className={
+                            active
+                              ? 'helix-graph-edge helix-graph-edge-active'
+                              : 'helix-graph-edge'
+                          }
+                          x1={
+                            sourceX
+                          }
+                          y1={
+                            sourceY
+                          }
+                          x2={
+                            targetX
+                          }
+                          y2={
+                            targetY
+                          }
+                        />
+
+                        {
+                          active && (
+                            <text
+                              className="helix-graph-edge-label"
+                              x={
+                                midX
+                              }
+                              y={
+                                midY -
+                                8
+                              }
+                              textAnchor="middle"
+                            >
+                              {
+                                edge.label
+                              }
+                            </text>
+                          )
+                        }
+                      </g>
+                    )
+                  },
+                )
+              }
+
+              {
+                discoveryNodes.map(
+                  (
+                    node,
+                  ) => {
+                    const palette =
+                      getGraphNodeColor(
+                        node.type,
+                      )
+
+                    const active =
+                      node.id ===
+                      selectedNode.id
+
+                    const x =
+                      node.x *
+                      10
+
+                    const y =
+                      node.y *
+                      6.6
+
+                    return (
+                      <g
+                        key={
+                          node.id
+                        }
+                        className={
+                          active
+                            ? 'helix-graph-node helix-graph-node-active'
+                            : 'helix-graph-node'
+                        }
+                        onClick={
+                          () =>
+                            setSelectedNodeId(
+                              node.id,
+                            )
+                        }
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <rect
+                          x={
+                            x -
+                            66
+                          }
+                          y={
+                            y -
+                            26
+                          }
+                          width="132"
+                          height="52"
+                          rx="12"
+                          fill={
+                            palette.fill
+                          }
+                          stroke={
+                            active
+                              ? '#253b75'
+                              : palette.stroke
+                          }
+                          strokeWidth={
+                            active
+                              ? 2.5
+                              : 1.2
+                          }
+                        />
+
+                        <text
+                          className="helix-graph-node-type"
+                          x={
+                            x -
+                            50
+                          }
+                          y={
+                            y -
+                            7
+                          }
+                          fill={
+                            palette.text
+                          }
+                        >
+                          {
+                            getGraphTypeLabel(
+                              node.type,
+                            )
+                          }
+                        </text>
+
+                        <text
+                          className="helix-graph-node-label"
+                          x={
+                            x -
+                            50
+                          }
+                          y={
+                            y +
+                            12
+                          }
+                        >
+                          {
+                            node.label.length >
+                            17
+                              ? `${node.label.slice(
+                                  0,
+                                  15,
+                                )}…`
+                              : node.label
+                          }
+                        </text>
+                      </g>
+                    )
+                  },
+                )
+              }
+            </svg>
+
+            <div className="helix-discovery-footer">
+              <strong>
+                Educational research network
+              </strong>
+
+              <span>
+                Demo graph for research exploration. Relationships require
+                independent scientific validation.
+              </span>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function HypothesesPage() {
+  return (
+    <div className="helix-hypotheses-page">
+      <style>
+        {`
+          .helix-hypotheses-page {
+            min-height: 100vh;
+            background:
+              radial-gradient(circle at 16% 8%, rgba(74, 101, 219, 0.14), transparent 32%),
+              #f8f7f1;
+            color: #232822;
+          }
+
+          .helix-hypotheses-shell {
+            width: min(1050px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 32px 0 80px;
+          }
+
+          .helix-hypotheses-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 34px;
+          }
+
+          .helix-hypotheses-nav a {
+            color: #232822;
+            text-decoration: none;
+            font-weight: 850;
+          }
+
+          .helix-hypotheses-card {
+            padding: 34px;
+            border: 1px solid #dfe4dc;
+            border-radius: 32px;
+            background: rgba(255, 254, 249, 0.92);
+            box-shadow: 0 24px 70px rgba(29, 36, 27, 0.07);
+          }
+
+          .helix-hypotheses-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #3655a5;
+            font-size: 12px;
+            font-weight: 850;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+          }
+
+          .helix-hypotheses-card h1 {
+            margin: 16px 0 12px;
+            color: #20251f;
+            font-size: clamp(42px, 7vw, 76px);
+            line-height: 0.95;
+            letter-spacing: -3.2px;
+          }
+
+          .helix-hypotheses-card p {
+            max-width: 760px;
+            color: #657062;
+            font-size: 16px;
+            line-height: 1.7;
+          }
+
+          .helix-hypotheses-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 26px;
+          }
+
+          .helix-hypothesis-item {
+            display: grid;
+            grid-template-columns: 46px 1fr;
+            gap: 14px;
+            align-items: start;
+            padding: 16px;
+            border: 1px solid #e7ebe3;
+            border-radius: 20px;
+            background: #fbfbf6;
+          }
+
+          .helix-hypothesis-icon {
+            display: grid;
+            place-items: center;
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            background: #edf1ff;
+            color: #3655a5;
+          }
+
+          .helix-hypothesis-item h2 {
+            margin: 0;
+            color: #20251f;
+            font-size: 18px;
+          }
+
+          .helix-hypothesis-item p {
+            margin: 5px 0 0;
+            font-size: 13px;
+            line-height: 1.5;
+          }
+        `}
+      </style>
+
+      <main className="helix-hypotheses-shell">
+        <nav className="helix-hypotheses-nav">
+          <Link to="/">
+            Helix
+          </Link>
+
+          <Link to="/explore">
+            Open Explorer →
+          </Link>
+        </nav>
+
+        <section className="helix-hypotheses-card">
+          <span className="helix-hypotheses-eyebrow">
+            <Lightbulb size={16} />
+
+            Hypothesis workspace
+          </span>
+
+          <h1>
+            Turn research connections into testable ideas.
+          </h1>
+
+          <p>
+            This page explains how Helix can help users move from a
+            research map to possible hypotheses. It is for educational
+            organization only, not scientific proof or clinical guidance.
+          </p>
+
+          <div className="helix-hypotheses-list">
+            <article className="helix-hypothesis-item">
+              <span className="helix-hypothesis-icon">
+                <Network size={20} />
+              </span>
+
+              <div>
+                <h2>
+                  Find connected concepts
+                </h2>
+
+                <p>
+                  Use the research map and Discovery Graph to identify
+                  diseases, genes, pathways, and therapies that appear
+                  connected.
+                </p>
+              </div>
+            </article>
+
+            <article className="helix-hypothesis-item">
+              <span className="helix-hypothesis-icon">
+                <ShieldCheck size={20} />
+              </span>
+
+              <div>
+                <h2>
+                  Review the evidence
+                </h2>
+
+                <p>
+                  Separate stronger evidence from limited or uncertain
+                  claims before treating a connection as important.
+                </p>
+              </div>
+            </article>
+
+            <article className="helix-hypothesis-item">
+              <span className="helix-hypothesis-icon">
+                <FlaskConical size={20} />
+              </span>
+
+              <div>
+                <h2>
+                  Frame a research question
+                </h2>
+
+                <p>
+                  Convert a pattern into a question that could be
+                  investigated with sources, experiments, or datasets.
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
   )
 }
 
@@ -1441,6 +2596,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+
+      <ExploreProjectsShortcut />
     </BrowserRouter>
   )
 }
