@@ -23,6 +23,7 @@ import {
   Dna,
   ExternalLink,
   FlaskConical,
+  FolderKanban,
   Home,
   Lightbulb,
   LoaderCircle,
@@ -35,6 +36,8 @@ import {
 
 import {
   Link,
+  useNavigate,
+  useParams,
 } from 'react-router-dom'
 
 import {
@@ -83,12 +86,10 @@ import type {
 
 import './Explore.css'
 
-
 interface FlowNodeData
   extends Record<string, unknown> {
   researchNode: ResearchNode
 }
-
 
 type HelixFlowNode =
   Node<FlowNodeData>
@@ -96,6 +97,22 @@ type HelixFlowNode =
 type HelixFlowEdge =
   Edge
 
+interface StoredResearchProject {
+  version: 1
+  id: string
+  title: string
+  question: string
+  researchMap: ResearchMap
+  expandedNodeIds: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+const PROJECTS_KEY =
+  'helix.researchProjects.v1'
+
+const ACTIVE_PROJECT_ID_KEY =
+  'helix.activeProjectId.v1'
 
 const exampleQuestions = [
   'What evidence connects SOD1 to ALS?',
@@ -104,19 +121,287 @@ const exampleQuestions = [
   'What are the leading hypotheses for dark matter?',
 ]
 
-
 const NODE_WIDTH =
   220
 
 const NODE_HEIGHT =
   82
 
+function canUseStorage() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.localStorage !== 'undefined'
+  )
+}
 
-function getNodeIcon(
-  type: ResearchNodeType,
+function makeProjectId() {
+  if (
+    typeof crypto !== 'undefined' &&
+    'randomUUID' in crypto
+  ) {
+    return crypto.randomUUID()
+  }
+
+  return `project-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`
+}
+
+function makeProjectTitle(
+  question:
+    string,
+) {
+  const cleaned =
+    question.trim()
+
+  if (
+    cleaned.length <=
+    72
+  ) {
+    return cleaned
+  }
+
+  return `${cleaned.slice(
+    0,
+    69,
+  )}...`
+}
+
+function readProjects() {
+  if (
+    !canUseStorage()
+  ) {
+    return []
+  }
+
+  try {
+    const raw =
+      window.localStorage.getItem(
+        PROJECTS_KEY,
+      )
+
+    if (
+      !raw
+    ) {
+      return []
+    }
+
+    const parsed =
+      JSON.parse(
+        raw,
+      ) as StoredResearchProject[]
+
+    if (
+      !Array.isArray(
+        parsed,
+      )
+    ) {
+      return []
+    }
+
+    return parsed.filter(
+      (
+        project,
+      ): project is StoredResearchProject =>
+        Boolean(
+          project,
+        ) &&
+        project.version ===
+          1 &&
+        typeof project.id ===
+          'string' &&
+        Boolean(
+          project.researchMap,
+        ),
+    )
+  } catch {
+    return []
+  }
+}
+
+function writeProjects(
+  projects:
+    StoredResearchProject[],
 ) {
   if (
-    type === 'gene'
+    !canUseStorage()
+  ) {
+    return
+  }
+
+  window.localStorage.setItem(
+    PROJECTS_KEY,
+    JSON.stringify(
+      projects,
+    ),
+  )
+}
+
+function getProject(
+  projectId:
+    string,
+) {
+  return (
+    readProjects().find(
+      (
+        project,
+      ) =>
+        project.id ===
+        projectId,
+    ) ??
+    null
+  )
+}
+
+function setActiveProjectId(
+  projectId:
+    string,
+) {
+  if (
+    !canUseStorage()
+  ) {
+    return
+  }
+
+  window.localStorage.setItem(
+    ACTIVE_PROJECT_ID_KEY,
+    projectId,
+  )
+}
+
+function clearActiveProjectId() {
+  if (
+    !canUseStorage()
+  ) {
+    return
+  }
+
+  window.localStorage.removeItem(
+    ACTIVE_PROJECT_ID_KEY,
+  )
+}
+
+function createProject(
+  map:
+    ResearchMap,
+) {
+  const now =
+    new Date().toISOString()
+
+  const project:
+    StoredResearchProject = {
+      version:
+        1,
+
+      id:
+        makeProjectId(),
+
+      title:
+        makeProjectTitle(
+          map.question,
+        ),
+
+      question:
+        map.question,
+
+      researchMap:
+        map,
+
+      expandedNodeIds:
+        [],
+
+      createdAt:
+        now,
+
+      updatedAt:
+        now,
+    }
+
+  const projects =
+    readProjects()
+
+  writeProjects([
+    project,
+    ...projects,
+  ])
+
+  setActiveProjectId(
+    project.id,
+  )
+
+  return project
+}
+
+function saveProject({
+  projectId,
+  map,
+  expandedNodeIds,
+}: {
+  projectId:
+    string
+
+  map:
+    ResearchMap
+
+  expandedNodeIds:
+    string[]
+}) {
+  const projects =
+    readProjects()
+
+  const existingProject =
+    projects.find(
+      (
+        project,
+      ) =>
+        project.id ===
+        projectId,
+    )
+
+  if (
+    !existingProject
+  ) {
+    return null
+  }
+
+  const updatedProject:
+    StoredResearchProject = {
+      ...existingProject,
+
+      question:
+        map.question,
+
+      researchMap:
+        map,
+
+      expandedNodeIds,
+
+      updatedAt:
+        new Date().toISOString(),
+    }
+
+  writeProjects(
+    projects.map(
+      (
+        project,
+      ) =>
+        project.id ===
+        projectId
+          ? updatedProject
+          : project,
+    ),
+  )
+
+  return updatedProject
+}
+
+function getNodeIcon(
+  type:
+    ResearchNodeType,
+) {
+  if (
+    type ===
+    'gene'
   ) {
     return (
       <Dna size={19} />
@@ -124,7 +409,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'drug'
+    type ===
+    'drug'
   ) {
     return (
       <FlaskConical size={19} />
@@ -132,7 +418,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'pathway'
+    type ===
+    'pathway'
   ) {
     return (
       <Network size={19} />
@@ -140,7 +427,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'molecule'
+    type ===
+    'molecule'
   ) {
     return (
       <Beaker size={19} />
@@ -148,7 +436,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'material'
+    type ===
+    'material'
   ) {
     return (
       <CircleDot size={19} />
@@ -156,7 +445,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'technology'
+    type ===
+    'technology'
   ) {
     return (
       <Atom size={19} />
@@ -164,7 +454,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'theory'
+    type ===
+    'theory'
   ) {
     return (
       <Lightbulb size={19} />
@@ -172,7 +463,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'experiment'
+    type ===
+    'experiment'
   ) {
     return (
       <FlaskConical size={19} />
@@ -180,7 +472,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'paper'
+    type ===
+    'paper'
   ) {
     return (
       <BookOpen size={19} />
@@ -188,7 +481,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'dataset'
+    type ===
+    'dataset'
   ) {
     return (
       <Database size={19} />
@@ -196,7 +490,8 @@ function getNodeIcon(
   }
 
   if (
-    type === 'question'
+    type ===
+    'question'
   ) {
     return (
       <Sparkles size={19} />
@@ -204,8 +499,10 @@ function getNodeIcon(
   }
 
   if (
-    type === 'process' ||
-    type === 'mechanism'
+    type ===
+      'process' ||
+    type ===
+      'mechanism'
   ) {
     return (
       <Network size={19} />
@@ -217,13 +514,17 @@ function getNodeIcon(
   )
 }
 
-
 function getDomainIcon(
-  domain: string,
+  domain:
+    string,
 ) {
   if (
-    domain.includes('Bio') ||
-    domain.includes('Neuro')
+    domain.includes(
+      'Bio',
+    ) ||
+    domain.includes(
+      'Neuro',
+    )
   ) {
     return (
       <Brain size={18} />
@@ -231,7 +532,9 @@ function getDomainIcon(
   }
 
   if (
-    domain.includes('Chem')
+    domain.includes(
+      'Chem',
+    )
   ) {
     return (
       <Beaker size={18} />
@@ -239,7 +542,9 @@ function getDomainIcon(
   }
 
   if (
-    domain.includes('Astronomy')
+    domain.includes(
+      'Astronomy',
+    )
   ) {
     return (
       <Orbit size={18} />
@@ -251,9 +556,9 @@ function getDomainIcon(
   )
 }
 
-
 function createNodeLabel(
-  node: ResearchNode,
+  node:
+    ResearchNode,
 ) {
   return (
     <div className="helix-flow-node-inner">
@@ -282,9 +587,9 @@ function createNodeLabel(
   )
 }
 
-
 function layoutGraph(
-  map: ResearchMap,
+  map:
+    ResearchMap,
 ) {
   const graph =
     new dagre.graphlib.Graph()
@@ -313,7 +618,6 @@ function layoutGraph(
       60,
   })
 
-
   map.nodes.forEach(
     (
       researchNode,
@@ -337,7 +641,6 @@ function layoutGraph(
     },
   )
 
-
   map.edges.forEach(
     (
       edge,
@@ -349,11 +652,9 @@ function layoutGraph(
     },
   )
 
-
   dagre.layout(
     graph,
   )
-
 
   const nodes:
     HelixFlowNode[] =
@@ -377,7 +678,6 @@ function layoutGraph(
             'question'
               ? 95
               : NODE_HEIGHT
-
 
           return {
             id:
@@ -431,7 +731,6 @@ function layoutGraph(
           }
         },
       )
-
 
   const edges:
     HelixFlowEdge[] =
@@ -505,13 +804,11 @@ function layoutGraph(
         }),
       )
 
-
   return {
     nodes,
     edges,
   }
 }
-
 
 function getEvidenceLabel(
   strength:
@@ -519,22 +816,27 @@ function getEvidenceLabel(
 ) {
   if (
     !strength ||
-    strength === 'unknown'
+    strength ===
+      'unknown'
   ) {
     return 'Not yet evaluated'
   }
 
   return (
     strength
-      .charAt(0)
+      .charAt(
+        0,
+      )
       .toUpperCase() +
-    strength.slice(1)
+    strength.slice(
+      1,
+    )
   )
 }
 
-
 function shouldSearchPubMed(
-  node: ResearchNode,
+  node:
+    ResearchNode,
 ) {
   const biomedicalDomains = [
     'Biomedical Science',
@@ -551,17 +853,18 @@ function shouldSearchPubMed(
   )
 }
 
-
 function buildPubMedQuery(
-  node: ResearchNode,
-  map: ResearchMap,
+  node:
+    ResearchNode,
+
+  map:
+    ResearchMap,
 ) {
   const question =
     map.question.trim()
 
   const label =
     node.label.trim()
-
 
   if (
     question
@@ -573,18 +876,47 @@ function buildPubMedQuery(
     return question
   }
 
-
   return `${label} ${question}`
 }
 
-
 export function Explore() {
+  const navigate =
+    useNavigate()
+
+  const {
+    projectId,
+  } =
+    useParams<{
+      projectId:
+        string
+    }>()
+
+  const loadedProject =
+    useMemo(
+      () => {
+        if (
+          !projectId
+        ) {
+          return null
+        }
+
+        return getProject(
+          projectId,
+        )
+      },
+      [
+        projectId,
+      ],
+    )
+
   const [
     input,
     setInput,
   ] =
-    useState('')
-
+    useState(
+      loadedProject?.question ??
+        '',
+    )
 
   const [
     researchMap,
@@ -592,11 +924,227 @@ export function Explore() {
   ] =
     useState<
       ResearchMap | null
-    >(null)
+    >(
+      loadedProject?.researchMap ??
+        null,
+    )
 
+  const [
+    activeProject,
+    setActiveProject,
+  ] =
+    useState<
+      StoredResearchProject | null
+    >(
+      loadedProject,
+    )
+
+  const [
+    expandedNodeIds,
+    setExpandedNodeIds,
+  ] =
+    useState<
+      string[]
+    >(
+      loadedProject?.expandedNodeIds ??
+        [],
+    )
+
+  useEffect(
+    () => {
+      if (
+        projectId
+      ) {
+        const project =
+          getProject(
+            projectId,
+          )
+
+        if (
+          !project
+        ) {
+          clearActiveProjectId()
+
+          navigate(
+            '/projects',
+            {
+              replace:
+                true,
+            },
+          )
+
+          return
+        }
+
+        setActiveProjectId(
+          project.id,
+        )
+
+        setActiveProject(
+          project,
+        )
+
+        setResearchMap(
+          project.researchMap,
+        )
+
+        setExpandedNodeIds(
+          project.expandedNodeIds,
+        )
+
+        setInput(
+          project.question,
+        )
+
+        return
+      }
+
+      setActiveProject(
+        null,
+      )
+
+      setResearchMap(
+        null,
+      )
+
+      setExpandedNodeIds(
+        [],
+      )
+
+      setInput(
+        '',
+      )
+
+      clearActiveProjectId()
+    },
+    [
+      projectId,
+      navigate,
+    ],
+  )
+
+  useEffect(
+    () => {
+      if (
+        !activeProject ||
+        !researchMap
+      ) {
+        return
+      }
+
+      const timeout =
+        window.setTimeout(
+          () => {
+            const saved =
+              saveProject({
+                projectId:
+                  activeProject.id,
+
+                map:
+                  researchMap,
+
+                expandedNodeIds,
+              })
+
+            if (
+              saved
+            ) {
+              setActiveProject(
+                saved,
+              )
+            }
+          },
+          250,
+        )
+
+      return () => {
+        window.clearTimeout(
+          timeout,
+        )
+      }
+    },
+    [
+      activeProject?.id,
+      researchMap,
+      expandedNodeIds,
+    ],
+  )
+
+  function startResearch(
+    question:
+      string,
+  ) {
+    const cleaned =
+      question.trim()
+
+    if (
+      !cleaned
+    ) {
+      return
+    }
+
+    const map =
+      generateResearchMap(
+        cleaned,
+      )
+
+    const project =
+      createProject(
+        map,
+      )
+
+    setInput(
+      cleaned,
+    )
+
+    setResearchMap(
+      map,
+    )
+
+    setActiveProject(
+      project,
+    )
+
+    setExpandedNodeIds(
+      [],
+    )
+
+    navigate(
+      `/explore/${project.id}`,
+      {
+        replace:
+          true,
+      },
+    )
+  }
+
+  function resetResearch() {
+    clearActiveProjectId()
+
+    setActiveProject(
+      null,
+    )
+
+    setResearchMap(
+      null,
+    )
+
+    setExpandedNodeIds(
+      [],
+    )
+
+    setInput(
+      '',
+    )
+
+    navigate(
+      '/explore',
+    )
+  }
 
   if (
-    !researchMap
+    !researchMap ||
+    !activeProject
   ) {
     return (
       <QuestionScreen
@@ -607,77 +1155,54 @@ export function Explore() {
           setInput
         }
         onSubmit={
-          (
-            question,
-          ) => {
-            const cleaned =
-              question.trim()
-
-
-            if (
-              !cleaned
-            ) {
-              return
-            }
-
-
-            setInput(
-              cleaned,
-            )
-
-
-            setResearchMap(
-              generateResearchMap(
-                cleaned,
-              ),
-            )
-          }
+          startResearch
         }
       />
     )
   }
 
-
   return (
     <ReactFlowProvider>
       <ResearchWorkspace
+        project={
+          activeProject
+        }
         researchMap={
           researchMap
         }
         setResearchMap={
           setResearchMap
         }
+        expandedNodeIds={
+          expandedNodeIds
+        }
+        setExpandedNodeIds={
+          setExpandedNodeIds
+        }
         resetResearch={
-          () => {
-            setResearchMap(
-              null,
-            )
-
-            setInput(
-              '',
-            )
-          }
+          resetResearch
         }
       />
     </ReactFlowProvider>
   )
 }
 
-
 interface QuestionScreenProps {
-  input: string
+  input:
+    string
 
   setInput:
     (
-      value: string,
+      value:
+        string,
     ) => void
 
   onSubmit:
     (
-      question: string,
+      question:
+        string,
     ) => void
 }
-
 
 function QuestionScreen({
   input,
@@ -695,7 +1220,6 @@ function QuestionScreen({
     )
   }
 
-
   return (
     <div className="helix-question-page">
       <header className="helix-question-nav">
@@ -707,6 +1231,13 @@ function QuestionScreen({
         </Link>
 
         <div className="helix-question-nav-actions">
+          <Link
+            to="/projects"
+            className="helix-nav-text-link"
+          >
+            Projects
+          </Link>
+
           <Link
             to="/hypotheses"
             className="helix-nav-text-link"
@@ -722,12 +1253,10 @@ function QuestionScreen({
         </div>
       </header>
 
-
       <main className="helix-question-main">
         <div className="helix-question-orbit helix-orbit-one" />
 
         <div className="helix-question-orbit helix-orbit-two" />
-
 
         <section className="helix-question-content">
           <div className="helix-question-eyebrow">
@@ -748,7 +1277,6 @@ function QuestionScreen({
             mechanisms, evidence, and
             relationships behind it.
           </p>
-
 
           <form
             className="helix-primary-question-form"
@@ -781,7 +1309,6 @@ function QuestionScreen({
               <ArrowRight size={20} />
             </button>
           </form>
-
 
           <div className="helix-example-area">
             <span>
@@ -823,24 +1350,38 @@ function QuestionScreen({
   )
 }
 
-
 interface ResearchWorkspaceProps {
-  researchMap: ResearchMap
+  project:
+    StoredResearchProject
+
+  researchMap:
+    ResearchMap
 
   setResearchMap:
     (
       map:
-        ResearchMap | null,
+        ResearchMap,
+    ) => void
+
+  expandedNodeIds:
+    string[]
+
+  setExpandedNodeIds:
+    (
+      ids:
+        string[],
     ) => void
 
   resetResearch:
     () => void
 }
 
-
 function ResearchWorkspace({
+  project,
   researchMap,
   setResearchMap,
+  expandedNodeIds,
+  setExpandedNodeIds,
   resetResearch,
 }: ResearchWorkspaceProps) {
   const {
@@ -848,16 +1389,16 @@ function ResearchWorkspace({
   } =
     useReactFlow()
 
-
   const initialFlow =
     useMemo(
       () =>
         layoutGraph(
           researchMap,
         ),
-      [researchMap],
+      [
+        researchMap,
+      ],
     )
-
 
   const [
     nodes,
@@ -868,7 +1409,6 @@ function ResearchWorkspace({
       initialFlow.nodes,
     )
 
-
   const [
     edges,
     setEdges,
@@ -877,7 +1417,6 @@ function ResearchWorkspace({
     useEdgesState(
       initialFlow.edges,
     )
-
 
   const [
     selectedNodeId,
@@ -889,7 +1428,6 @@ function ResearchWorkspace({
       null,
     )
 
-
   const [
     selectedEdgeId,
     setSelectedEdgeId,
@@ -900,17 +1438,16 @@ function ResearchWorkspace({
       null,
     )
 
-
-  const [
-    expandedNodeIds,
-    setExpandedNodeIds,
-  ] =
-    useState<
-      Set<string>
-    >(
-      new Set(),
+  const expandedNodeIdSet =
+    useMemo(
+      () =>
+        new Set(
+          expandedNodeIds,
+        ),
+      [
+        expandedNodeIds,
+      ],
     )
-
 
   const selectedNode =
     useMemo(
@@ -929,7 +1466,6 @@ function ResearchWorkspace({
       ],
     )
 
-
   const selectedEdge =
     useMemo(
       () =>
@@ -947,7 +1483,6 @@ function ResearchWorkspace({
       ],
     )
 
-
   useEffect(
     () => {
       const flow =
@@ -962,7 +1497,6 @@ function ResearchWorkspace({
       setEdges(
         flow.edges,
       )
-
 
       window.setTimeout(
         () => {
@@ -988,7 +1522,6 @@ function ResearchWorkspace({
     ],
   )
 
-
   const expandNode =
     useCallback(
       (
@@ -996,19 +1529,17 @@ function ResearchWorkspace({
           ResearchNode,
       ) => {
         if (
-          expandedNodeIds.has(
+          expandedNodeIdSet.has(
             node.id,
           )
         ) {
           return
         }
 
-
         const expansion =
           expandResearchNode(
             node,
           )
-
 
         const existingNodeIds =
           new Set(
@@ -1020,7 +1551,6 @@ function ResearchWorkspace({
             ),
           )
 
-
         const existingEdgeIds =
           new Set(
             researchMap.edges.map(
@@ -1030,7 +1560,6 @@ function ResearchWorkspace({
                 edge.id,
             ),
           )
-
 
         const newNodes =
           expansion.nodes.filter(
@@ -1042,7 +1571,6 @@ function ResearchWorkspace({
               ),
           )
 
-
         const newEdges =
           expansion.edges.filter(
             (
@@ -1053,24 +1581,10 @@ function ResearchWorkspace({
               ),
           )
 
-
-        setExpandedNodeIds(
-          (
-            previous,
-          ) => {
-            const next =
-              new Set(
-                previous,
-              )
-
-            next.add(
-              node.id,
-            )
-
-            return next
-          },
-        )
-
+        setExpandedNodeIds([
+          ...expandedNodeIds,
+          node.id,
+        ])
 
         setResearchMap({
           ...researchMap,
@@ -1087,15 +1601,17 @@ function ResearchWorkspace({
         })
       },
       [
+        expandedNodeIdSet,
         expandedNodeIds,
         researchMap,
+        setExpandedNodeIds,
         setResearchMap,
       ],
     )
 
-
   function selectNode(
-    id: string,
+    id:
+      string,
   ) {
     setSelectedEdgeId(
       null,
@@ -1105,10 +1621,10 @@ function ResearchWorkspace({
       id,
     )
   }
-
 
   function selectEdge(
-    id: string,
+    id:
+      string,
   ) {
     setSelectedNodeId(
       null,
@@ -1118,7 +1634,6 @@ function ResearchWorkspace({
       id,
     )
   }
-
 
   function clearSelection() {
     setSelectedNodeId(
@@ -1129,7 +1644,6 @@ function ResearchWorkspace({
       null,
     )
   }
-
 
   return (
     <div className="helix-workspace">
@@ -1155,19 +1669,26 @@ function ResearchWorkspace({
 
             New question
           </button>
-        </div>
 
+          <Link
+            to="/projects"
+            className="helix-new-question"
+          >
+            <FolderKanban size={16} />
+
+            Projects
+          </Link>
+        </div>
 
         <div className="helix-workspace-question">
           <Sparkles size={16} />
 
           <span>
             {
-              researchMap.question
+              project.title
             }
           </span>
         </div>
-
 
         <div className="helix-workspace-header-right">
           <Link
@@ -1189,7 +1710,6 @@ function ResearchWorkspace({
           </Link>
         </div>
       </header>
-
 
       <main
         className={
@@ -1233,7 +1753,6 @@ function ResearchWorkspace({
               Drag to move · Scroll to zoom · Click to explore
             </span>
           </div>
-
 
           <div className="helix-react-flow-wrapper">
             <ReactFlow
@@ -1321,8 +1840,11 @@ function ResearchWorkspace({
               />
             </ReactFlow>
 
-
             <div className="helix-map-help">
+              <span>
+                Auto-saved
+              </span>
+
               <span>
                 Drag canvas
               </span>
@@ -1353,7 +1875,6 @@ function ResearchWorkspace({
           </div>
         </section>
 
-
         {
           (
             selectedNode ||
@@ -1370,7 +1891,7 @@ function ResearchWorkspace({
                       researchMap
                     }
                     isExpanded={
-                      expandedNodeIds.has(
+                      expandedNodeIdSet.has(
                         selectedNode.id,
                       )
                     }
@@ -1389,7 +1910,6 @@ function ResearchWorkspace({
                   />
                 )
               }
-
 
               {
                 selectedEdge && (
@@ -1417,26 +1937,28 @@ function ResearchWorkspace({
   )
 }
 
-
 interface NodeInspectorProps {
-  node: ResearchNode
+  node:
+    ResearchNode
 
-  map: ResearchMap
+  map:
+    ResearchMap
 
-  isExpanded: boolean
+  isExpanded:
+    boolean
 
   onClose:
     () => void
 
   onOpenNode:
     (
-      id: string,
+      id:
+        string,
     ) => void
 
   onExpand:
     () => void
 }
-
 
 function NodeInspector({
   node,
@@ -1456,7 +1978,6 @@ function NodeInspector({
       [],
     )
 
-
   const [
     loadingPapers,
     setLoadingPapers,
@@ -1464,7 +1985,6 @@ function NodeInspector({
     useState(
       false,
     )
-
 
   const [
     paperError,
@@ -1475,7 +1995,6 @@ function NodeInspector({
     >(
       null,
     )
-
 
   const connections =
     map.edges.filter(
@@ -1488,18 +2007,15 @@ function NodeInspector({
           node.id,
     )
 
-
   const pubMedEnabled =
     shouldSearchPubMed(
       node,
     )
 
-
   useEffect(
     () => {
       let cancelled =
         false
-
 
       if (
         !pubMedEnabled
@@ -1519,7 +2035,6 @@ function NodeInspector({
         return
       }
 
-
       async function loadPapers() {
         setLoadingPapers(
           true,
@@ -1533,7 +2048,6 @@ function NodeInspector({
           [],
         )
 
-
         try {
           const query =
             buildPubMedQuery(
@@ -1541,20 +2055,17 @@ function NodeInspector({
               map,
             )
 
-
           const result =
             await searchPubMed(
               query,
               5,
             )
 
-
           if (
             cancelled
           ) {
             return
           }
-
 
           setPapers(
             result.papers,
@@ -1568,11 +2079,9 @@ function NodeInspector({
             return
           }
 
-
           setPapers(
             [],
           )
-
 
           setPaperError(
             error instanceof
@@ -1591,9 +2100,7 @@ function NodeInspector({
         }
       }
 
-
       loadPapers()
-
 
       return () => {
         cancelled =
@@ -1609,7 +2116,6 @@ function NodeInspector({
       pubMedEnabled,
     ],
   )
-
 
   return (
     <div className="helix-inspector-content">
@@ -1639,7 +2145,6 @@ function NodeInspector({
         </button>
       </div>
 
-
       <div className="helix-inspector-title">
         <h2>
           {
@@ -1654,13 +2159,11 @@ function NodeInspector({
         </span>
       </div>
 
-
       <p className="helix-inspector-description">
         {
           node.description
         }
       </p>
-
 
       <div className="helix-inspector-section">
         <span className="helix-inspector-section-label">
@@ -1683,7 +2186,6 @@ function NodeInspector({
           </strong>
         </div>
       </div>
-
 
       {
         connections.length >
@@ -1714,13 +2216,11 @@ function NodeInspector({
                           otherId,
                       )
 
-
                     if (
                       !related
                     ) {
                       return null
                     }
-
 
                     return (
                       <button
@@ -1758,7 +2258,6 @@ function NodeInspector({
         )
       }
 
-
       {
         pubMedEnabled && (
           <div className="helix-inspector-section">
@@ -1777,7 +2276,6 @@ function NodeInspector({
               <BookOpen size={18} />
             </div>
 
-
             {
               loadingPapers && (
                 <div className="helix-literature-loading">
@@ -1791,7 +2289,6 @@ function NodeInspector({
               )
             }
 
-
             {
               paperError && (
                 <div className="helix-literature-error">
@@ -1801,7 +2298,6 @@ function NodeInspector({
                 </div>
               )
             }
-
 
             {
               !loadingPapers &&
@@ -1814,7 +2310,6 @@ function NodeInspector({
                 </div>
               )
             }
-
 
             {
               papers.length >
@@ -1849,13 +2344,11 @@ function NodeInspector({
                             }
                           </div>
 
-
                           <h4>
                             {
                               paper.title
                             }
                           </h4>
-
 
                           {
                             paper.journal && (
@@ -1866,7 +2359,6 @@ function NodeInspector({
                               </p>
                             )
                           }
-
 
                           {
                             paper.authors.length >
@@ -1893,7 +2385,6 @@ function NodeInspector({
                             )
                           }
 
-
                           {
                             paper.abstract && (
                               <p className="helix-paper-abstract">
@@ -1909,7 +2400,6 @@ function NodeInspector({
                               </p>
                             )
                           }
-
 
                           <div className="helix-paper-actions">
                             {
@@ -1944,7 +2434,6 @@ function NodeInspector({
           </div>
         )
       }
-
 
       {
         node.type !==
@@ -1999,21 +2488,22 @@ function NodeInspector({
   )
 }
 
-
 interface EdgeInspectorProps {
-  edge: ResearchEdge
+  edge:
+    ResearchEdge
 
-  map: ResearchMap
+  map:
+    ResearchMap
 
   onClose:
     () => void
 
   onOpenNode:
     (
-      id: string,
+      id:
+        string,
     ) => void
 }
-
 
 function EdgeInspector({
   edge,
@@ -2030,7 +2520,6 @@ function EdgeInspector({
         edge.sourceId,
     )
 
-
   const target =
     map.nodes.find(
       (
@@ -2039,7 +2528,6 @@ function EdgeInspector({
         node.id ===
         edge.targetId,
     )
-
 
   return (
     <div className="helix-inspector-content">
@@ -2062,7 +2550,6 @@ function EdgeInspector({
           <X size={18} />
         </button>
       </div>
-
 
       <div className="helix-edge-pair">
         <button
@@ -2110,7 +2597,6 @@ function EdgeInspector({
         </button>
       </div>
 
-
       <div className="helix-inspector-section">
         <span className="helix-inspector-section-label">
           Why they are connected
@@ -2122,7 +2608,6 @@ function EdgeInspector({
           }
         </p>
       </div>
-
 
       <div className="helix-inspector-section">
         <span className="helix-inspector-section-label">
@@ -2139,7 +2624,7 @@ function EdgeInspector({
           <strong>
             {
               edge.evidenceStrength ===
-              'unknown'
+                'unknown'
                 ? 'Awaiting source verification'
                 : edge.evidenceStrength
             }
