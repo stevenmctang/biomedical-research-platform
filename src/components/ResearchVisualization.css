@@ -1,0 +1,553 @@
+.helix-visual-page {
+    height: calc(100vh - 72px);
+    min-height: calc(100vh - 72px);
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 34px;
+    background:
+      radial-gradient(circle at 14% 8%, rgba(82, 105, 210, 0.14), transparent 30%),
+      radial-gradient(circle at 90% 20%, rgba(36, 90, 130, 0.1), transparent 30%),
+      #f8f7f2;
+  }
+  
+  .helix-visual-shell {
+    width: min(1220px, 100%);
+    margin: 0 auto;
+    padding-bottom: 56px;
+  }
+  
+  .helix-visual-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 18px;
+    align-items: stretch;
+    margin-bottom: 20px;
+  }
+  
+  .helix-visual-hero > div,
+  .helix-visual-summary-card {
+    border: 1px solid #e2e6dc;
+    border-radius: 28px;
+    background: rgba(255, 254, 249, 0.9);
+    box-shadow: 0 24px 70px rgba(29, 36, 27, 0.07);
+  }
+  
+  .helix-visual-hero > div {
+    padding: 30px;
+  }
+  
+  .helix-visual-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #3655a5;
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+  }
+  
+  .helix-visual-hero h2 {
+    max-width: 780px;
+    margin: 16px 0 10px;
+    color: #242923;
+    font-size: clamp(34px, 5vw, 62px);
+    line-height: 0.96;
+    letter-spacing: -2.4px;
+  }
+  
+  .helix-visual-hero p {
+    max-width: 720px;
+    margin: 0;
+    color: #687066;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  
+  .helix-visual-summary-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px;
+  }
+  
+  .helix-visual-summary-card span {
+    color: #3655a5;
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  
+  .helix-visual-summary-card strong {
+    margin-top: 9px;
+    color: #242923;
+    font-size: 21px;
+    line-height: 1.15;
+  }
+  
+  .helix-visual-summary-card p {
+    margin-top: 10px;
+    color: #687066;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  
+  .helix-visual-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+    gap: 18px;
+  }
+  
+  .helix-visual-model-card,
+  .helix-visual-concept-card,
+  .helix-visual-stat {
+    border: 1px solid #e2e6dc;
+    background: rgba(255, 254, 249, 0.94);
+    box-shadow: 0 20px 60px rgba(29, 36, 27, 0.06);
+  }
+  
+  .helix-visual-model-card {
+    overflow: hidden;
+    border-radius: 30px;
+  }
+  
+  .helix-visual-model-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #e9ece4;
+  }
+  
+  .helix-visual-model-toolbar > div {
+    display: grid;
+    gap: 6px;
+  }
+  
+  .helix-visual-model-toolbar strong {
+    color: #242923;
+    font-size: 17px;
+  }
+  
+  .helix-visual-model-toolbar > span {
+    width: fit-content;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #edf1ff;
+    color: #3655a5;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  
+  .helix-visual-domain {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #596457;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  
+  .helix-visual-scene {
+    position: relative;
+    min-height: 620px;
+    overflow: hidden;
+    perspective: 1000px;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(70, 95, 180, 0.2), transparent 25%),
+      radial-gradient(circle at 20% 25%, rgba(42, 101, 130, 0.12), transparent 22%),
+      linear-gradient(145deg, #fffef9 0%, #f3f4ef 100%);
+  }
+  
+  .helix-visual-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(105, 112, 102, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(105, 112, 102, 0.08) 1px, transparent 1px);
+    background-size: 36px 36px;
+    transform: rotateX(62deg) scale(1.35);
+    transform-origin: center bottom;
+    opacity: 0.65;
+  }
+  
+  .helix-visual-depth-ring {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border: 1px solid rgba(77, 96, 150, 0.23);
+    border-radius: 50%;
+    transform-style: preserve-3d;
+    animation: helixSpin 18s linear infinite;
+  }
+  
+  .helix-ring-one {
+    width: 520px;
+    height: 260px;
+    margin-left: -260px;
+    margin-top: -130px;
+    transform: rotateX(66deg) rotateZ(0deg);
+  }
+  
+  .helix-ring-two {
+    width: 430px;
+    height: 430px;
+    margin-left: -215px;
+    margin-top: -215px;
+    transform: rotateY(64deg) rotateZ(18deg);
+    animation-duration: 22s;
+  }
+  
+  .helix-ring-three {
+    width: 360px;
+    height: 190px;
+    margin-left: -180px;
+    margin-top: -95px;
+    transform: rotateX(72deg) rotateZ(-26deg);
+    animation-duration: 26s;
+    animation-direction: reverse;
+  }
+  
+  .helix-visual-axis {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    background: linear-gradient(90deg, transparent, rgba(86, 100, 150, 0.32), transparent);
+    transform-origin: center;
+  }
+  
+  .helix-axis-horizontal {
+    width: 70%;
+    height: 1px;
+    margin-left: -35%;
+  }
+  
+  .helix-axis-vertical {
+    width: 1px;
+    height: 70%;
+    margin-top: -35%;
+    background: linear-gradient(180deg, transparent, rgba(86, 100, 150, 0.28), transparent);
+  }
+  
+  .helix-visual-core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: grid;
+    place-items: center;
+    transform: translate(-50%, -50%);
+  }
+  
+  .helix-visual-core-glow {
+    position: absolute;
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(72, 103, 190, 0.24), transparent 68%);
+    filter: blur(2px);
+  }
+  
+  .helix-visual-core-object {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 106px;
+    height: 106px;
+    border: 1px solid #d8dfd4;
+    border-radius: 32px;
+    background:
+      linear-gradient(145deg, rgba(255, 254, 249, 0.98), rgba(238, 242, 255, 0.94));
+    color: #253b75;
+    box-shadow:
+      0 24px 70px rgba(36, 50, 80, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  
+  .helix-visual-core-object svg {
+    width: 42px;
+    height: 42px;
+  }
+  
+  .helix-visual-core-label {
+    position: absolute;
+    top: 124px;
+    width: 230px;
+    padding: 12px 14px;
+    border: 1px solid #e2e6dc;
+    border-radius: 16px;
+    background: rgba(255, 254, 249, 0.9);
+    text-align: center;
+    box-shadow: 0 18px 42px rgba(30, 35, 28, 0.08);
+  }
+  
+  .helix-visual-core-label span {
+    color: #3655a5;
+    font-size: 10px;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+  
+  .helix-visual-core-label strong {
+    display: block;
+    margin-top: 4px;
+    color: #242923;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+  
+  .helix-visual-orbital-node {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    gap: 5px;
+    width: 116px;
+    min-height: 92px;
+    padding: 10px;
+    border: 1px solid #dbe1d8;
+    border-radius: 24px;
+    background: rgba(255, 254, 249, 0.94);
+    color: #253b75;
+    text-align: center;
+    box-shadow: 0 18px 45px rgba(31, 38, 28, 0.13);
+    cursor: default;
+    transform-style: preserve-3d;
+  }
+  
+  .helix-visual-orbital-node span {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    background: #edf1ff;
+  }
+  
+  .helix-visual-orbital-node strong {
+    color: #242923;
+    font-size: 11px;
+    line-height: 1.18;
+  }
+  
+  .helix-visual-orbital-one {
+    left: 12%;
+    top: 17%;
+    transform: translateZ(90px) rotate(-4deg);
+  }
+  
+  .helix-visual-orbital-two {
+    right: 12%;
+    top: 18%;
+    transform: translateZ(60px) rotate(5deg);
+  }
+  
+  .helix-visual-orbital-three {
+    left: 9%;
+    bottom: 19%;
+    transform: translateZ(45px) rotate(4deg);
+  }
+  
+  .helix-visual-orbital-four {
+    right: 13%;
+    bottom: 18%;
+    transform: translateZ(75px) rotate(-5deg);
+  }
+  
+  .helix-visual-orbital-five {
+    left: 42%;
+    top: 7%;
+    transform: translateZ(110px);
+  }
+  
+  .helix-visual-orbital-six {
+    left: 42%;
+    bottom: 8%;
+    transform: translateZ(55px);
+  }
+  
+  .helix-visual-disclaimer {
+    margin: 0;
+    padding: 16px 20px;
+    border-top: 1px solid #e9ece4;
+    color: #687066;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  
+  .helix-visual-right-panel {
+    display: grid;
+    gap: 14px;
+  }
+  
+  .helix-visual-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  
+  .helix-visual-stat {
+    padding: 17px;
+    border-radius: 20px;
+  }
+  
+  .helix-visual-stat strong {
+    display: block;
+    color: #242923;
+    font-size: 28px;
+    line-height: 1;
+  }
+  
+  .helix-visual-stat span {
+    display: block;
+    margin-top: 7px;
+    color: #727a6f;
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  
+  .helix-visual-concept-card {
+    padding: 20px;
+    border-radius: 24px;
+  }
+  
+  .helix-visual-concept-card h3 {
+    margin: 0 0 12px;
+    color: #242923;
+    font-size: 18px;
+    letter-spacing: -0.35px;
+  }
+  
+  .helix-visual-concept-card p {
+    margin: 0;
+    color: #687066;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  
+  .helix-visual-layer-list {
+    display: grid;
+    gap: 10px;
+  }
+  
+  .helix-visual-layer-item {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 11px;
+    align-items: start;
+    padding: 12px;
+    border: 1px solid #e9ece4;
+    border-radius: 17px;
+    background: #fbfbf6;
+  }
+  
+  .helix-visual-layer-item > span {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    background: #edf1ff;
+    color: #3655a5;
+  }
+  
+  .helix-visual-layer-item strong {
+    display: block;
+    color: #242923;
+    font-size: 13px;
+  }
+  
+  .helix-visual-layer-item p {
+    margin-top: 4px;
+    color: #687066;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  
+  .helix-visual-map-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 42px;
+    margin-top: 16px;
+    padding: 0 14px;
+    border: 1px solid #253b75;
+    border-radius: 13px;
+    background: #253b75;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  
+  @keyframes helixSpin {
+    from {
+      rotate: 0deg;
+    }
+  
+    to {
+      rotate: 360deg;
+    }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .helix-visual-depth-ring {
+      animation: none;
+    }
+  }
+  
+  @media (max-width: 980px) {
+    .helix-visual-hero,
+    .helix-visual-layout {
+      grid-template-columns: 1fr;
+    }
+  
+    .helix-visual-scene {
+      min-height: 540px;
+    }
+  }
+  
+  @media (max-width: 640px) {
+    .helix-visual-page {
+      padding: 18px;
+    }
+  
+    .helix-visual-hero > div,
+    .helix-visual-summary-card {
+      padding: 22px;
+    }
+  
+    .helix-visual-scene {
+      min-height: 620px;
+    }
+  
+    .helix-visual-orbital-node {
+      width: 104px;
+    }
+  
+    .helix-visual-orbital-one,
+    .helix-visual-orbital-three {
+      left: 4%;
+    }
+  
+    .helix-visual-orbital-two,
+    .helix-visual-orbital-four {
+      right: 4%;
+    }
+  
+    .helix-visual-orbital-five,
+    .helix-visual-orbital-six {
+      left: calc(50% - 52px);
+    }
+  
+    .helix-visual-stat-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
