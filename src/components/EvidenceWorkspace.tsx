@@ -1,558 +1,767 @@
 import {
-    AlertTriangle,
-    ArrowRight,
-    BookOpen,
-    CheckCircle2,
-    CircleHelp,
-    Database,
-    FlaskConical,
-    Network,
-    Search,
-    ShieldCheck,
-    Sparkles,
-  } from 'lucide-react'
-  
-  import type {
-    ResearchEdge,
-    ResearchMap,
-    ResearchNode,
-  } from '../types/researchMap'
-  
-  import './EvidenceWorkspace.css'
-  
-  interface EvidenceWorkspaceProps {
-    map: ResearchMap
-    onOpenMap: () => void
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  CircleHelp,
+  Database,
+  ExternalLink,
+  LoaderCircle,
+  Network,
+  Search,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
+import type {
+  ResearchEdge,
+  ResearchMap,
+  ResearchNode,
+} from '../types/researchMap'
+
+import './EvidenceWorkspace.css'
+
+interface EvidenceWorkspaceProps {
+  map: ResearchMap
+  onOpenMap: () => void
+}
+
+type EvidenceStrength =
+  | ResearchNode['evidenceStrength']
+  | ResearchEdge['evidenceStrength']
+
+interface EvidenceArticle {
+  id: string
+  title: string
+  source: string
+  year: string
+  abstract: string
+  authors: string[]
+  url: string
+  doi: string
+  pubmedId: string
+  citationCount: number
+  provider: string
+  type: string
+  openAccessPdf: string
+}
+
+interface EvidenceApiResponse {
+  ok?: boolean
+  query: string
+  articles: EvidenceArticle[]
+  errors: string[]
+}
+
+function cleanQuestion(question: string) {
+  return question
+    .replace(/\?/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function getApiBaseUrl() {
+  return 'http://localhost:3001'
+}
+
+function getEvidenceLabel(strength: EvidenceStrength) {
+  if (!strength || strength === 'unknown') {
+    return 'Needs verification'
   }
-  
-  type EvidenceStrength =
-    | ResearchNode['evidenceStrength']
-    | ResearchEdge['evidenceStrength']
-  
-  function getEvidenceLabel(
-    strength:
-      EvidenceStrength,
-  ) {
-    if (
-      !strength ||
-      strength ===
-        'unknown'
-    ) {
-      return 'Needs verification'
-    }
-  
-    if (
-      strength ===
-      'limited'
-    ) {
-      return 'Limited'
-    }
-  
-    return strength
-      .charAt(
-        0,
-      )
-      .toUpperCase() +
-      strength.slice(
-        1,
-      )
+
+  if (strength === 'limited') {
+    return 'Limited'
   }
-  
-  function getEvidenceIcon(
-    strength:
-      EvidenceStrength,
-  ) {
-    if (
-      strength ===
-      'strong'
-    ) {
-      return (
-        <CheckCircle2 size={18} />
-      )
-    }
-  
-    if (
-      strength ===
-        'moderate' ||
-      strength ===
-        'limited'
-    ) {
-      return (
-        <AlertTriangle size={18} />
-      )
-    }
-  
-    return (
-      <CircleHelp size={18} />
+
+  return strength.charAt(0).toUpperCase() + strength.slice(1)
+}
+
+function getEvidenceIcon(strength: EvidenceStrength) {
+  if (strength === 'strong') {
+    return <CheckCircle2 size={18} />
+  }
+
+  if (strength === 'moderate' || strength === 'limited') {
+    return <AlertTriangle size={18} />
+  }
+
+  return <CircleHelp size={18} />
+}
+
+function getEvidenceClass(strength: EvidenceStrength) {
+  if (strength === 'strong') {
+    return 'helix-evidence-status-strong'
+  }
+
+  if (strength === 'moderate') {
+    return 'helix-evidence-status-moderate'
+  }
+
+  if (strength === 'limited') {
+    return 'helix-evidence-status-weak'
+  }
+
+  return 'helix-evidence-status-unknown'
+}
+
+function filterNodesByEvidence(
+  nodes: ResearchNode[],
+  strength: ResearchNode['evidenceStrength'],
+) {
+  return nodes.filter(
+    (node) =>
+      node.type !== 'question' &&
+      node.evidenceStrength === strength,
+  )
+}
+
+function getUnknownNodes(nodes: ResearchNode[]) {
+  return nodes.filter(
+    (node) =>
+      node.type !== 'question' &&
+      (!node.evidenceStrength || node.evidenceStrength === 'unknown'),
+  )
+}
+
+function findNode(nodes: ResearchNode[], id: string) {
+  return nodes.find((node) => node.id === id)
+}
+
+function getImportantConcepts(map: ResearchMap) {
+  return map.nodes
+    .filter(
+      (node) =>
+        node.type !== 'question' &&
+        node.label.length > 1,
     )
+    .slice(0, 5)
+}
+
+function buildEvidenceQuery(map: ResearchMap) {
+  const question = cleanQuestion(map.question)
+
+  const concepts = getImportantConcepts(map)
+    .slice(0, 3)
+    .map((node) => node.label)
+    .join(' ')
+
+  if (concepts) {
+    return `${question} ${concepts}`
   }
-  
-  function getEvidenceClass(
-    strength:
-      EvidenceStrength,
-  ) {
-    if (
-      strength ===
-      'strong'
-    ) {
-      return 'helix-evidence-status-strong'
+
+  return question
+}
+
+function getAuthorsText(authors: string[]) {
+  if (!authors || authors.length === 0) {
+    return 'Authors not listed'
+  }
+
+  const visibleAuthors = authors.slice(0, 4).join(', ')
+
+  if (authors.length > 4) {
+    return `${visibleAuthors} et al.`
+  }
+
+  return visibleAuthors
+}
+
+function getAbstractPreview(abstract: string) {
+  if (!abstract) {
+    return 'No abstract was returned from this metadata source. Open the article page to review the paper directly.'
+  }
+
+  if (abstract.length <= 420) {
+    return abstract
+  }
+
+  return `${abstract.slice(0, 420)}…`
+}
+
+export function EvidenceWorkspace({
+  map,
+  onOpenMap,
+}: EvidenceWorkspaceProps) {
+  const [articles, setArticles] = useState<EvidenceArticle[]>([])
+  const [errors, setErrors] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
+
+  const evidenceQuery = useMemo(
+    () => buildEvidenceQuery(map),
+    [map],
+  )
+
+  const strongNodes = filterNodesByEvidence(map.nodes, 'strong')
+  const moderateNodes = filterNodesByEvidence(map.nodes, 'moderate')
+  const limitedNodes = filterNodesByEvidence(map.nodes, 'limited')
+  const unknownNodes = getUnknownNodes(map.nodes)
+
+  const verifiableEdges = map.edges.slice(0, 10)
+
+  const reviewQueue = [
+    ...unknownNodes,
+    ...limitedNodes,
+  ].slice(0, 6)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadEvidence() {
+      setIsLoading(true)
+      setApiError(null)
+      setErrors([])
+      setArticles([])
+
+      try {
+        const apiBaseUrl = getApiBaseUrl()
+
+        const url =
+          `${apiBaseUrl}/api/evidence?q=${encodeURIComponent(evidenceQuery)}`
+
+        console.log('Loading evidence from:', url)
+
+        const response = await fetch(url)
+
+        if (!response.ok) {
+          throw new Error(`Evidence API returned ${response.status}`)
+        }
+
+        const data = await response.json() as EvidenceApiResponse
+
+        console.log('Evidence API response:', data)
+
+        if (!cancelled) {
+          setArticles(data.articles || [])
+          setErrors(data.errors || [])
+        }
+      } catch (error) {
+        console.error('Evidence frontend error:', error)
+
+        if (!cancelled) {
+          setApiError(
+            error instanceof Error
+              ? error.message
+              : 'Evidence search failed.',
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
     }
-  
-    if (
-      strength ===
-      'moderate'
-    ) {
-      return 'helix-evidence-status-moderate'
+
+    if (evidenceQuery) {
+      loadEvidence()
     }
-  
-    if (
-      strength ===
-      'limited'
-    ) {
-      return 'helix-evidence-status-weak'
+
+    return () => {
+      cancelled = true
     }
-  
-    return 'helix-evidence-status-unknown'
-  }
-  
-  function filterNodesByEvidence(
-    nodes:
-      ResearchNode[],
-  
-    strength:
-      ResearchNode['evidenceStrength'],
-  ) {
-    return nodes.filter(
-      (
-        node,
-      ) =>
-        node.type !==
-          'question' &&
-        node.evidenceStrength ===
-          strength,
-    )
-  }
-  
-  function getUnknownNodes(
-    nodes:
-      ResearchNode[],
-  ) {
-    return nodes.filter(
-      (
-        node,
-      ) =>
-        node.type !==
-          'question' &&
-        (
-          !node.evidenceStrength ||
-          node.evidenceStrength ===
-            'unknown'
-        ),
-    )
-  }
-  
-  function findNode(
-    nodes:
-      ResearchNode[],
-  
-    id:
-      string,
-  ) {
-    return nodes.find(
-      (
-        node,
-      ) =>
-        node.id ===
-        id,
-    )
-  }
-  
-  export function EvidenceWorkspace({
-    map,
-    onOpenMap,
-  }: EvidenceWorkspaceProps) {
-    const conceptNodes =
-      map.nodes.filter(
-        (
-          node,
-        ) =>
-          node.type !==
-          'question',
-      )
-  
-    const strongNodes =
-      filterNodesByEvidence(
-        map.nodes,
-        'strong',
-      )
-  
-    const moderateNodes =
-      filterNodesByEvidence(
-        map.nodes,
-        'moderate',
-      )
-  
-    const limitedNodes =
-      filterNodesByEvidence(
-        map.nodes,
-        'limited',
-      )
-  
-    const unknownNodes =
-      getUnknownNodes(
-        map.nodes,
-      )
-  
-    const verifiableEdges =
-      map.edges.slice(
-        0,
-        10,
-      )
-  
-    const reviewQueue = [
-      ...unknownNodes,
-      ...limitedNodes,
-    ].slice(
-      0,
-      6,
-    )
-  
-    return (
-      <main className="helix-evidence-page">
-        <section className="helix-evidence-shell">
-          <div className="helix-evidence-hero">
-            <div className="helix-evidence-hero-copy">
-              <span className="helix-evidence-eyebrow">
-                <ShieldCheck size={16} />
-  
-                Evidence workspace
-              </span>
-  
-              <h2>
-                Separate what is supported from what needs review.
-              </h2>
-  
-              <p>
-                This workspace is different from the map. It organizes
-                concepts into evidence levels, highlights relationship
-                claims, and creates a verification queue for anything
-                that should be checked against real scientific sources.
-              </p>
+  }, [evidenceQuery])
+
+  return (
+    <main className="helix-evidence-page">
+      <section className="helix-evidence-shell">
+        <div className="helix-evidence-hero">
+          <div className="helix-evidence-hero-copy">
+            <span className="helix-evidence-eyebrow">
+              <ShieldCheck size={16} />
+
+              Live research evidence
+            </span>
+
+            <h2>
+              Real paper metadata from scholarly databases.
+            </h2>
+
+            <p>
+              Helix sends the research question to your backend, searches
+              scholarly metadata sources, and displays article titles,
+              authors, journals, years, abstracts, citations, DOIs, and
+              source links directly inside the app.
+            </p>
+          </div>
+
+          <aside className="helix-evidence-command-card">
+            <span>
+              Evidence query
+            </span>
+
+            <strong>
+              {
+                evidenceQuery
+              }
+            </strong>
+
+            <button
+              type="button"
+              onClick={onOpenMap}
+            >
+              Inspect on map
+
+              <ArrowRight size={16} />
+            </button>
+          </aside>
+        </div>
+
+        <div className="helix-evidence-scoreboard">
+          <article className="helix-evidence-score-card helix-score-strong">
+            <CheckCircle2 size={21} />
+
+            <strong>
+              {
+                strongNodes.length
+              }
+            </strong>
+
+            <span>
+              Strong map claims
+            </span>
+          </article>
+
+          <article className="helix-evidence-score-card helix-score-moderate">
+            <AlertTriangle size={21} />
+
+            <strong>
+              {
+                moderateNodes.length
+              }
+            </strong>
+
+            <span>
+              Moderate claims
+            </span>
+          </article>
+
+          <article className="helix-evidence-score-card helix-score-weak">
+            <BookOpen size={21} />
+
+            <strong>
+              {
+                isLoading ? '...' : articles.length
+              }
+            </strong>
+
+            <span>
+              Retrieved articles
+            </span>
+          </article>
+
+          <article className="helix-evidence-score-card helix-score-review">
+            <CircleHelp size={21} />
+
+            <strong>
+              {
+                reviewQueue.length
+              }
+            </strong>
+
+            <span>
+              Review queue
+            </span>
+          </article>
+        </div>
+
+        <div className="helix-evidence-layout">
+          <section className="helix-evidence-column">
+            <div className="helix-evidence-section-heading">
+              <div>
+                <span>
+                  Article results
+                </span>
+
+                <h3>
+                  Papers and scholarly works related to the question
+                </h3>
+              </div>
+
+              {
+                isLoading
+                  ? <LoaderCircle className="helix-spinner" size={20} />
+                  : <BookOpen size={20} />
+              }
             </div>
-  
-            <aside className="helix-evidence-command-card">
-              <span>
-                Research question
-              </span>
-  
-              <strong>
-                {
-                  map.question
-                }
-              </strong>
-  
-              <button
-                type="button"
-                onClick={
-                  onOpenMap
-                }
-              >
-                Inspect on map
-  
-                <ArrowRight size={16} />
-              </button>
-            </aside>
-          </div>
-  
-          <div className="helix-evidence-scoreboard">
-            <article className="helix-evidence-score-card helix-score-strong">
-              <CheckCircle2 size={21} />
-  
-              <strong>
-                {
-                  strongNodes.length
-                }
-              </strong>
-  
-              <span>
-                Strong evidence
-              </span>
-            </article>
-  
-            <article className="helix-evidence-score-card helix-score-moderate">
-              <AlertTriangle size={21} />
-  
-              <strong>
-                {
-                  moderateNodes.length
-                }
-              </strong>
-  
-              <span>
-                Moderate evidence
-              </span>
-            </article>
-  
-            <article className="helix-evidence-score-card helix-score-weak">
-              <FlaskConical size={21} />
-  
-              <strong>
-                {
-                  limitedNodes.length
-                }
-              </strong>
-  
-              <span>
-                Limited evidence
-              </span>
-            </article>
-  
-            <article className="helix-evidence-score-card helix-score-review">
-              <CircleHelp size={21} />
-  
-              <strong>
-                {
-                  unknownNodes.length
-                }
-              </strong>
-  
-              <span>
-                Needs review
-              </span>
-            </article>
-          </div>
-  
-          <div className="helix-evidence-layout">
-            <section className="helix-evidence-column">
+
+            {
+              isLoading && (
+                <div className="helix-evidence-loading">
+                  <LoaderCircle className="helix-spinner" size={18} />
+
+                  Searching Semantic Scholar, OpenAlex, and Crossref...
+                </div>
+              )
+            }
+
+            {
+              apiError && (
+                <div className="helix-source-why">
+                  <strong>
+                    Evidence API failed
+                  </strong>
+
+                  <p>
+                    {
+                      apiError
+                    } Make sure your backend terminal is still running
+                    and that this link works: http://localhost:3001/api/health
+                  </p>
+                </div>
+              )
+            }
+
+            {
+              !isLoading &&
+              !apiError &&
+              articles.length === 0 && (
+                <div className="helix-source-why">
+                  <strong>
+                    No article metadata returned
+                  </strong>
+
+                  <p>
+                    The backend responded, but it did not return article
+                    cards for this query. Try a more specific scientific
+                    question like “What evidence connects SOD1 to ALS?”
+                    or “How does CRISPR-Cas9 target DNA?”
+                  </p>
+                </div>
+              )
+            }
+
+            <div className="helix-source-grid">
+              {
+                articles.map((article) => (
+                  <article
+                    key={article.id}
+                    className="helix-source-card"
+                  >
+                    <div className="helix-source-card-top">
+                      <span className="helix-evidence-status-pill helix-evidence-status-strong">
+                        <Database size={15} />
+
+                        {
+                          article.provider
+                        }
+                      </span>
+
+                      <span className="helix-source-year">
+                        {
+                          article.year
+                        }
+                      </span>
+                    </div>
+
+                    <h4>
+                      {
+                        article.title
+                      }
+                    </h4>
+
+                    <div className="helix-source-meta-row">
+                      <span>
+                        {
+                          article.source
+                        }
+                      </span>
+
+                      <span>
+                        {
+                          article.type
+                        }
+                      </span>
+
+                      <span>
+                        {
+                          article.citationCount
+                        } citations
+                      </span>
+                    </div>
+
+                    <p className="helix-source-authors">
+                      {
+                        getAuthorsText(article.authors)
+                      }
+                    </p>
+
+                    <p className="helix-source-summary">
+                      {
+                        getAbstractPreview(article.abstract)
+                      }
+                    </p>
+
+                    <div className="helix-source-tags">
+                      {
+                        article.doi && (
+                          <span>
+                            DOI
+                          </span>
+                        )
+                      }
+
+                      {
+                        article.pubmedId && (
+                          <span>
+                            PubMed
+                          </span>
+                        )
+                      }
+
+                      {
+                        article.openAccessPdf && (
+                          <span>
+                            Open PDF
+                          </span>
+                        )
+                      }
+
+                      <span>
+                        {
+                          article.provider
+                        }
+                      </span>
+                    </div>
+
+                    <div className="helix-source-actions">
+                      {
+                        article.url && (
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="helix-source-open"
+                          >
+                            Open article
+
+                            <ExternalLink size={14} />
+                          </a>
+                        )
+                      }
+
+                      {
+                        article.openAccessPdf && (
+                          <a
+                            href={article.openAccessPdf}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="helix-source-open helix-source-open-secondary"
+                          >
+                            Open PDF
+
+                            <ExternalLink size={14} />
+                          </a>
+                        )
+                      }
+                    </div>
+                  </article>
+                ))
+              }
+            </div>
+
+            {
+              errors.length > 0 && (
+                <div className="helix-source-why">
+                  <strong>
+                    Some sources failed
+                  </strong>
+
+                  <p>
+                    {
+                      errors.join(' ')
+                    }
+                  </p>
+                </div>
+              )
+            }
+          </section>
+
+          <aside className="helix-evidence-side">
+            <div className="helix-evidence-panel-card">
               <div className="helix-evidence-section-heading">
                 <div>
                   <span>
-                    Concept evidence
+                    Relationship claims
                   </span>
-  
+
                   <h3>
-                    Evidence by scientific concept
+                    What the map is claiming
                   </h3>
                 </div>
-  
-                <BookOpen size={20} />
+
+                <Network size={20} />
               </div>
-  
-              <div className="helix-evidence-concept-list">
+
+              <div className="helix-evidence-claim-list">
                 {
-                  conceptNodes.map(
-                    (
-                      node,
-                    ) => (
+                  verifiableEdges.map((edge) => {
+                    const source = findNode(map.nodes, edge.sourceId)
+                    const target = findNode(map.nodes, edge.targetId)
+
+                    return (
                       <article
-                        key={
-                          node.id
-                        }
-                        className="helix-evidence-concept-card"
+                        key={edge.id}
+                        className="helix-evidence-claim-card"
                       >
-                        <div className="helix-evidence-concept-top">
-                          <div>
-                            <strong>
-                              {
-                                node.label
-                              }
-                            </strong>
-  
-                            <span>
-                              {
-                                node.subtitle
-                              }
-                            </span>
-                          </div>
-  
-                          <span
-                            className={`helix-evidence-status-pill ${getEvidenceClass(
-                              node.evidenceStrength,
-                            )}`}
-                          >
-                            {
-                              getEvidenceIcon(
-                                node.evidenceStrength,
-                              )
-                            }
-  
-                            {
-                              getEvidenceLabel(
-                                node.evidenceStrength,
-                              )
-                            }
-                          </span>
-                        </div>
-  
+                        <strong>
+                          {
+                            source?.label ?? edge.sourceId
+                          }{' '}
+                          →{' '}
+                          {
+                            target?.label ?? edge.targetId
+                          }
+                        </strong>
+
+                        <span
+                          className={`helix-evidence-status-pill ${getEvidenceClass(edge.evidenceStrength)}`}
+                        >
+                          {
+                            getEvidenceIcon(edge.evidenceStrength)
+                          }
+
+                          {
+                            getEvidenceLabel(edge.evidenceStrength)
+                          }
+                        </span>
+
                         <p>
                           {
-                            node.description
+                            edge.explanation
                           }
                         </p>
-  
-                        <div className="helix-evidence-source-row">
-                          <Search size={14} />
-  
-                          <span>
-                            Suggested verification query: “
-                            {
-                              node.label
-                            }{' '}
-                            {
-                              map.question
-                            }
-                            ”
-                          </span>
-                        </div>
                       </article>
-                    ),
-                  )
+                    )
+                  })
                 }
               </div>
-            </section>
-  
-            <aside className="helix-evidence-side">
-              <div className="helix-evidence-panel-card">
-                <div className="helix-evidence-section-heading">
-                  <div>
-                    <span>
-                      Relationship claims
-                    </span>
-  
-                    <h3>
-                      What the map is claiming
-                    </h3>
-                  </div>
-  
-                  <Network size={20} />
+            </div>
+
+            <div className="helix-evidence-panel-card">
+              <div className="helix-evidence-section-heading">
+                <div>
+                  <span>
+                    Verification tasks
+                  </span>
+
+                  <h3>
+                    How to use these papers
+                  </h3>
                 </div>
-  
-                <div className="helix-evidence-claim-list">
-                  {
-                    verifiableEdges.map(
-                      (
-                        edge,
-                      ) => {
-                        const source =
-                          findNode(
-                            map.nodes,
-                            edge.sourceId,
-                          )
-  
-                        const target =
-                          findNode(
-                            map.nodes,
-                            edge.targetId,
-                          )
-  
-                        return (
+
+                <Search size={20} />
+              </div>
+
+              <div className="helix-evidence-review-list">
+                <article className="helix-evidence-review-card">
+                  <Sparkles size={16} />
+
+                  <div>
+                    <strong>
+                      Compare the map to the papers
+                    </strong>
+
+                    <p>
+                      Check whether the article titles and abstracts
+                      actually support the generated relationship claims.
+                    </p>
+                  </div>
+                </article>
+
+                <article className="helix-evidence-review-card">
+                  <Sparkles size={16} />
+
+                  <div>
+                    <strong>
+                      Prefer reviews and highly cited papers
+                    </strong>
+
+                    <p>
+                      Use citation count, source name, year, and article
+                      type to decide which papers are best starting points.
+                    </p>
+                  </div>
+                </article>
+
+                <article className="helix-evidence-review-card">
+                  <Sparkles size={16} />
+
+                  <div>
+                    <strong>
+                      Do not treat search results as proof
+                    </strong>
+
+                    <p>
+                      These articles are evidence candidates. A user still
+                      needs to read and verify the actual claims.
+                    </p>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <div className="helix-evidence-panel-card">
+              <div className="helix-evidence-section-heading">
+                <div>
+                  <span>
+                    Review queue
+                  </span>
+
+                  <h3>
+                    Concepts needing support
+                  </h3>
+                </div>
+
+                <Database size={20} />
+              </div>
+
+              {
+                reviewQueue.length > 0
+                  ? (
+                    <div className="helix-evidence-review-list">
+                      {
+                        reviewQueue.map((node) => (
                           <article
-                            key={
-                              edge.id
-                            }
-                            className="helix-evidence-claim-card"
+                            key={node.id}
+                            className="helix-evidence-review-card"
                           >
-                            <strong>
-                              {
-                                source?.label ??
-                                edge.sourceId
-                              }{' '}
-                              →{' '}
-                              {
-                                target?.label ??
-                                edge.targetId
-                              }
-                            </strong>
-  
-                            <span
-                              className={`helix-evidence-status-pill ${getEvidenceClass(
-                                edge.evidenceStrength,
-                              )}`}
-                            >
-                              {
-                                getEvidenceLabel(
-                                  edge.evidenceStrength,
-                                )
-                              }
-                            </span>
-  
-                            <p>
-                              {
-                                edge.explanation
-                              }
-                            </p>
-                          </article>
-                        )
-                      },
-                    )
-                  }
-                </div>
-              </div>
-  
-              <div className="helix-evidence-panel-card">
-                <div className="helix-evidence-section-heading">
-                  <div>
-                    <span>
-                      Verification queue
-                    </span>
-  
-                    <h3>
-                      Check these next
-                    </h3>
-                  </div>
-  
-                  <Database size={20} />
-                </div>
-  
-                {
-                  reviewQueue.length >
-                    0
-                    ? (
-                      <div className="helix-evidence-review-list">
-                        {
-                          reviewQueue.map(
-                            (
-                              node,
-                            ) => (
-                              <article
-                                key={
-                                  node.id
+                            <Sparkles size={16} />
+
+                            <div>
+                              <strong>
+                                {
+                                  node.label
                                 }
-                                className="helix-evidence-review-card"
-                              >
-                                <Sparkles size={16} />
-  
-                                <div>
-                                  <strong>
-                                    {
-                                      node.label
-                                    }
-                                  </strong>
-  
-                                  <p>
-                                    Needs stronger source support before
-                                    being presented as a confident
-                                    research connection.
-                                  </p>
-                                </div>
-                              </article>
-                            ),
-                          )
-                        }
-                      </div>
-                    )
-                    : (
-                      <p className="helix-evidence-empty">
-                        No limited or unknown concepts are currently in
-                        the review queue.
-                      </p>
-                    )
-                }
-              </div>
-            </aside>
-          </div>
-        </section>
-      </main>
-    )
-  }
-  
+                              </strong>
+
+                              <p>
+                                Needs stronger source support before being
+                                presented as a confident research
+                                connection.
+                              </p>
+                            </div>
+                          </article>
+                        ))
+                      }
+                    </div>
+                  )
+                  : (
+                    <p className="helix-evidence-empty">
+                      No limited or unknown concepts are currently in the
+                      review queue.
+                    </p>
+                  )
+              }
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  )
+}
