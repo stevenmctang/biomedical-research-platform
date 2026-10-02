@@ -11,6 +11,7 @@ import {
 import { Link, useSearchParams } from 'react-router-dom'
 import { searchBiomedical } from '../utils/searchBiomedical'
 import type { SearchResult } from '../types/biomedical'
+import './Explore.css'
 
 function getResultIcon(type: SearchResult['type']) {
   if (type === 'gene') return <Dna size={18} />
