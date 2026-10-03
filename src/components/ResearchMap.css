@@ -1,0 +1,696 @@
+.research-map-shell {
+    display: grid;
+    grid-template-columns:
+      minmax(0, 1fr)
+      300px;
+  
+    min-height: 610px;
+  
+    border:
+      1px solid var(--border);
+  
+    border-radius: 18px;
+  
+    overflow: hidden;
+  
+    background:
+      rgba(
+        251,
+        250,
+        246,
+        0.74
+      );
+  
+    box-shadow:
+      0 24px 70px
+        rgba(
+          25,
+          28,
+          23,
+          0.05
+        );
+  }
+  
+  
+  .research-map-stage {
+    position: relative;
+  
+    min-height: 610px;
+  
+    overflow: hidden;
+  
+    background:
+      radial-gradient(
+        circle at center,
+        rgba(
+          49,
+          87,
+          213,
+          0.045
+        ),
+        transparent 42%
+      ),
+      linear-gradient(
+        rgba(
+          21,
+          23,
+          20,
+          0.025
+        ) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        rgba(
+          21,
+          23,
+          20,
+          0.025
+        ) 1px,
+        transparent 1px
+      );
+  
+    background-size:
+      auto,
+      48px 48px,
+      48px 48px;
+  }
+  
+  
+  .research-map-connections {
+    position: absolute;
+    inset: 0;
+  
+    width: 100%;
+    height: 100%;
+  
+    pointer-events: none;
+  }
+  
+  
+  .research-map-connections line {
+    stroke:
+      rgba(
+        80,
+        86,
+        77,
+        0.28
+      );
+  
+    stroke-width: 0.22;
+  }
+  
+  
+  .research-map-node {
+    position: absolute;
+  
+    transform:
+      translate(
+        -50%,
+        -50%
+      );
+  
+    min-width: 145px;
+  
+    max-width: 190px;
+  
+    display: flex;
+    align-items: center;
+  
+    gap: 10px;
+  
+    padding:
+      12px 14px;
+  
+    border:
+      1px solid #d8dad3;
+  
+    border-radius: 11px;
+  
+    background:
+      rgba(
+        252,
+        251,
+        247,
+        0.95
+      );
+  
+    color: #191b18;
+  
+    cursor: pointer;
+  
+    text-align: left;
+  
+    box-shadow:
+      0 7px 24px
+        rgba(
+          30,
+          34,
+          27,
+          0.045
+        );
+  
+    transition:
+      transform 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background 160ms ease;
+  }
+  
+  
+  .research-map-node:hover {
+    transform:
+      translate(
+        -50%,
+        -50%
+      )
+      translateY(-2px);
+  
+    border-color:
+      rgba(
+        49,
+        87,
+        213,
+        0.4
+      );
+  
+    box-shadow:
+      0 14px 34px
+        rgba(
+          35,
+          42,
+          31,
+          0.08
+        );
+  }
+  
+  
+  .research-map-node-selected {
+    border-color:
+      rgba(
+        49,
+        87,
+        213,
+        0.62
+      );
+  
+    background:
+      #fff;
+  
+    box-shadow:
+      0 0 0 3px
+        rgba(
+          49,
+          87,
+          213,
+          0.07
+        ),
+      0 14px 38px
+        rgba(
+          37,
+          43,
+          33,
+          0.08
+        );
+  }
+  
+  
+  .research-map-node-question {
+    min-width: 220px;
+  
+    padding:
+      15px 17px;
+  
+    border-color:
+      rgba(
+        49,
+        87,
+        213,
+        0.38
+      );
+  
+    background:
+      #181b18;
+  
+    color: #fff;
+  
+    z-index: 2;
+  }
+  
+  
+  .research-map-node-question
+  .research-map-node-icon {
+    color: #aebdff;
+  
+    border-color:
+      rgba(
+        255,
+        255,
+        255,
+        0.16
+      );
+  
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.06
+      );
+  }
+  
+  
+  .research-map-node-question small {
+    color:
+      rgba(
+        255,
+        255,
+        255,
+        0.55
+      ) !important;
+  }
+  
+  
+  .research-map-node-icon {
+    width: 31px;
+    height: 31px;
+  
+    flex-shrink: 0;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    border:
+      1px solid #dfe1db;
+  
+    border-radius: 8px;
+  
+    color: #3157d5;
+  
+    background:
+      #f5f5f0;
+  }
+  
+  
+  .research-map-node-copy {
+    min-width: 0;
+  
+    display: flex;
+    flex-direction: column;
+  
+    gap: 3px;
+  }
+  
+  
+  .research-map-node-copy small {
+    color: #8a8e85;
+  
+    font-size: 8px;
+    font-weight: 700;
+  
+    letter-spacing: 0.065em;
+  
+    text-transform: uppercase;
+  }
+  
+  
+  .research-map-node-copy strong {
+    overflow: hidden;
+  
+    font-family:
+      'Manrope',
+      sans-serif;
+  
+    font-size: 11px;
+    font-weight: 650;
+  
+    line-height: 1.35;
+  
+    text-overflow: ellipsis;
+  }
+  
+  
+  .research-map-key {
+    position: absolute;
+  
+    left: 24px;
+    bottom: 22px;
+  
+    display: flex;
+    flex-wrap: wrap;
+  
+    gap: 14px;
+  
+    padding:
+      9px 12px;
+  
+    border:
+      1px solid #dedfd9;
+  
+    border-radius: 9px;
+  
+    background:
+      rgba(
+        249,
+        248,
+        244,
+        0.86
+      );
+  
+    backdrop-filter:
+      blur(8px);
+  }
+  
+  
+  .research-map-key span {
+    display: inline-flex;
+    align-items: center;
+  
+    gap: 6px;
+  
+    color: #767b72;
+  
+    font-size: 8px;
+    font-weight: 600;
+  }
+  
+  
+  .map-key-dot {
+    width: 6px;
+    height: 6px;
+  
+    display: block;
+  
+    border-radius: 50%;
+  
+    background: #3157d5;
+  }
+  
+  
+  .disease-dot {
+    background: #3157d5;
+  }
+  
+  
+  .gene-dot {
+    background: #777b73;
+  }
+  
+  
+  .pathway-dot {
+    background: #9a8470;
+  }
+  
+  
+  .drug-dot {
+    background: #616a91;
+  }
+  
+  
+  .research-map-inspector {
+    padding: 28px 24px;
+  
+    border-left:
+      1px solid var(--border);
+  
+    background:
+      rgba(
+        248,
+        247,
+        242,
+        0.92
+      );
+  }
+  
+  
+  .research-map-inspector-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  
+    gap: 16px;
+  }
+  
+  
+  .research-map-inspector-top > span {
+    color: #858a80;
+  
+    font-size: 8px;
+    font-weight: 700;
+  
+    letter-spacing:
+      0.1em;
+  }
+  
+  
+  .research-map-inspector-top > div {
+    width: 31px;
+    height: 31px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    border:
+      1px solid #dcded7;
+  
+    border-radius: 8px;
+  
+    color: #3157d5;
+  
+    background: #fbfaf6;
+  }
+  
+  
+  .research-map-inspector h3 {
+    margin:
+      25px 0 0;
+  
+    font-family:
+      'Manrope',
+      sans-serif;
+  
+    font-size: 24px;
+    font-weight: 550;
+  
+    letter-spacing: -0.035em;
+  
+    line-height: 1.15;
+  }
+  
+  
+  .research-map-description {
+    margin:
+      13px 0 0;
+  
+    color: #6f746b;
+  
+    font-size: 10px;
+  
+    line-height: 1.75;
+  }
+  
+  
+  .research-map-metrics {
+    display: grid;
+  
+    grid-template-columns:
+      1fr 1fr;
+  
+    gap: 9px;
+  
+    margin-top: 26px;
+  }
+  
+  
+  .research-map-metrics > div {
+    padding:
+      13px;
+  
+    border:
+      1px solid #dfe1da;
+  
+    border-radius: 9px;
+  
+    background:
+      rgba(
+        255,
+        255,
+        255,
+        0.38
+      );
+  }
+  
+  
+  .research-map-metrics span {
+    display: block;
+  
+    color: #8b8f87;
+  
+    font-size: 8px;
+    font-weight: 700;
+  
+    text-transform: uppercase;
+  
+    letter-spacing:
+      0.07em;
+  }
+  
+  
+  .research-map-metrics strong {
+    display: block;
+  
+    margin-top: 5px;
+  
+    font-family:
+      'Manrope',
+      sans-serif;
+  
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  
+  .research-map-evidence-preview {
+    margin-top: 27px;
+  }
+  
+  
+  .research-map-section-label {
+    display: flex;
+    align-items: center;
+  
+    gap: 6px;
+  
+    margin-bottom: 10px;
+  
+    color: #7b8077;
+  
+    font-size: 8px;
+    font-weight: 700;
+  
+    letter-spacing:
+      0.08em;
+  }
+  
+  
+  .research-map-evidence-preview article {
+    padding:
+      11px 0;
+  
+    border-top:
+      1px solid #dedfd9;
+  }
+  
+  
+  .research-map-evidence-preview article:last-child {
+    border-bottom:
+      1px solid #dedfd9;
+  }
+  
+  
+  .research-map-evidence-preview strong {
+    display: block;
+  
+    font-size: 9px;
+    font-weight: 650;
+  
+    line-height: 1.5;
+  }
+  
+  
+  .research-map-evidence-preview span {
+    display: block;
+  
+    margin-top: 4px;
+  
+    color: #858a81;
+  
+    font-size: 8px;
+  }
+  
+  
+  .research-map-open {
+    min-height: 39px;
+  
+    margin-top: 24px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    gap: 7px;
+  
+    border-radius: 8px;
+  
+    background: #181b18;
+  
+    color: #fff;
+  
+    font-size: 9px;
+    font-weight: 650;
+  
+    text-decoration: none;
+  }
+  
+  
+  @media (
+    max-width: 900px
+  ) {
+    .research-map-shell {
+      grid-template-columns:
+        1fr;
+    }
+  
+  
+    .research-map-inspector {
+      border-left: 0;
+  
+      border-top:
+        1px solid var(--border);
+    }
+  }
+  
+  
+  @media (
+    max-width: 650px
+  ) {
+    .research-map-stage {
+      min-height: 720px;
+    }
+  
+  
+    .research-map-node {
+      min-width: 118px;
+  
+      max-width: 140px;
+  
+      padding:
+        9px 10px;
+    }
+  
+  
+    .research-map-node-question {
+      min-width: 175px;
+    }
+  
+  
+    .research-map-node-icon {
+      width: 26px;
+      height: 26px;
+    }
+  
+  
+    .research-map-node-copy strong {
+      font-size: 9px;
+    }
+  
+  
+    .research-map-key {
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+    }
+  }
+  

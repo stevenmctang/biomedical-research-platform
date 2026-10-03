@@ -4,19 +4,25 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "node --watch server/index.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/react": "^6.15.1",
+    "@supabase/supabase-js": "^2.115.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.2",
     "@xyflow/react": "^12.11.6",
+    "dagre": "^0.8.5",
     "eslint": "^9.29.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "express": "^5.2.1",
     "globals": "^16.2.0",
     "lucide-react": "^1.38.0",
     "react": "^19.1.0",
@@ -27,6 +33,8 @@
     "vite": "^6.3.5"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0"
+    "@types/dagre": "^0.7.54",
+    "@types/node": "^26.4.0",
+    "concurrently": "^9.2.1"
   }
 }
