@@ -1,0 +1,359 @@
+.helix-agent-page {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  background: #f7f5ee;
+  color: #171a16;
+}
+
+.helix-agent-sidebar {
+  min-height: calc(100vh - 72px);
+  padding: 22px;
+  background: #ece9df;
+  border-right: 1px solid #dad6c9;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.helix-agent-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.helix-agent-sidebar-question {
+  display: grid;
+  gap: 8px;
+}
+
+.helix-agent-sidebar-question span,
+.helix-agent-sidebar-footer span,
+.helix-agent-label,
+.helix-agent-header span,
+.helix-agent-progress-top span,
+.helix-agent-grid span,
+.helix-agent-mechanism-card span {
+  color: #6d7068;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.helix-agent-sidebar-question strong {
+  color: #171a16;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.helix-agent-stage-list {
+  display: grid;
+  gap: 8px;
+}
+
+.helix-agent-stage-item {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: #343831;
+  cursor: pointer;
+  text-align: left;
+}
+
+.helix-agent-stage-item-active,
+.helix-agent-stage-item:hover {
+  background: #fffdf7;
+  border-color: #d8d2c3;
+  box-shadow: 0 12px 28px rgba(34, 31, 23, 0.06);
+}
+
+.helix-agent-stage-item > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #171a16;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.helix-agent-stage-item strong {
+  display: block;
+  font-size: 13px;
+}
+
+.helix-agent-stage-item small {
+  display: block;
+  margin-top: 3px;
+  color: #74766f;
+  font-size: 11px;
+}
+
+.helix-agent-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.helix-agent-nav button {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid #d8d2c3;
+  border-radius: 14px;
+  background: #fffdf7;
+  color: #171a16;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.helix-agent-sidebar-footer {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.helix-agent-main {
+  min-width: 0;
+  height: calc(100vh - 72px);
+  overflow-y: auto;
+}
+
+.helix-agent-header {
+  min-height: 92px;
+  padding: 28px 36px;
+  border-bottom: 1px solid #ded9cc;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  background: rgba(247, 245, 238, 0.92);
+  backdrop-filter: blur(14px);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.helix-agent-header h1 {
+  margin: 8px 0 0;
+  color: #171a16;
+  font-size: clamp(32px, 5vw, 58px);
+  line-height: 0.98;
+  letter-spacing: -2.4px;
+}
+
+.helix-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #31352f;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.helix-agent-progress-section {
+  padding: 28px 36px 0;
+}
+
+.helix-agent-progress-top {
+  max-width: 900px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.helix-agent-progress-top strong {
+  font-size: 13px;
+}
+
+.helix-agent-progress-track {
+  max-width: 900px;
+  height: 6px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #ddd8ca;
+  overflow: hidden;
+}
+
+.helix-agent-progress-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #171a16;
+  transition: width 0.45s ease;
+}
+
+.helix-agent-content {
+  padding: 28px 36px 80px;
+}
+
+.helix-agent-panel {
+  max-width: 1120px;
+  padding: 28px;
+  border: 1px solid #ded9cc;
+  border-radius: 28px;
+  background: #fffdf7;
+  box-shadow: 0 24px 70px rgba(34, 31, 23, 0.08);
+}
+
+.helix-agent-panel-large {
+  min-height: 520px;
+}
+
+.helix-agent-panel h2 {
+  max-width: 900px;
+  margin: 16px 0 14px;
+  color: #171a16;
+  font-size: clamp(40px, 6vw, 78px);
+  line-height: 0.96;
+  letter-spacing: -3.2px;
+}
+
+.helix-agent-panel p {
+  max-width: 820px;
+  color: #494d45;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.helix-agent-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.helix-agent-grid div {
+  padding: 16px;
+  border: 1px solid #e1dccf;
+  border-radius: 18px;
+  background: #f8f5ed;
+}
+
+.helix-agent-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: #171a16;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.helix-agent-paper {
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid #e1dccf;
+  border-radius: 20px;
+  background: #f8f5ed;
+}
+
+.helix-agent-paper h3 {
+  margin: 12px 0 8px;
+  color: #171a16;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.helix-agent-paper a {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: 999px;
+  background: #171a16;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.helix-agent-mechanism-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.helix-agent-mechanism-card {
+  padding: 20px;
+  border: 1px solid #ded9cc;
+  border-radius: 20px;
+  background: #f8f5ed;
+}
+
+.helix-agent-mechanism-card h3 {
+  margin: 12px 0 8px;
+  color: #171a16;
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+.helix-agent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.helix-agent-actions button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #171a16;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.helix-agent-error {
+  color: #9a2d22 !important;
+}
+
+.helix-agent-spin {
+  animation: helixAgentSpin 1s linear infinite;
+}
+
+@keyframes helixAgentSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1050px) {
+  .helix-agent-page {
+    grid-template-columns: 1fr;
+  }
+
+  .helix-agent-sidebar {
+    min-height: unset;
+    border-right: 0;
+    border-bottom: 1px solid #dad6c9;
+  }
+
+  .helix-agent-main {
+    height: auto;
+  }
+
+  .helix-agent-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -33,9 +33,7 @@ import {
   Home,
 } from './pages/Home'
 
-import {
-  Explore,
-} from './pages/Explore'
+import Explore from './pages/Explore'
 
 import './App.css'
 
