@@ -46,3 +46,49 @@ a {
 #root {
   min-height: 100vh;
 }
+/* Global spacing cleanup */
+
+html,
+body,
+#root {
+  min-height: 0 !important;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.helix-home-page,
+.helix-home,
+.helix-home-main,
+.helix-home-shell,
+.helix-home-hero,
+.helix-hero,
+.helix-landing,
+.helix-landing-page,
+.helix-explore-entry,
+.helix-explore-workspace,
+.helix-explore-content,
+.helix-model-page,
+.helix-agent-page {
+  min-height: auto !important;
+}
+
+.helix-home-hero,
+.helix-hero,
+.helix-landing,
+.helix-explore-entry-center {
+  padding-top: 48px !important;
+  padding-bottom: 48px !important;
+}
+
+.helix-home-section,
+.helix-section {
+  padding-top: 48px !important;
+  padding-bottom: 48px !important;
+}
+
+main {
+  padding-bottom: 0;
+}

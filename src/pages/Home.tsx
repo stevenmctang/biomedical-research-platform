@@ -1424,7 +1424,7 @@ export function Home() {
               <Link to="/graph">
                 View Knowledge Graph
 
-                <Network size={18} />
+                <Network size={18} ></Network>
               </Link>
             </div>
           </div>

@@ -8,7 +8,7 @@
 }
 
 .helix-model-shell {
-  width: min(1220px, 100%);
+  width: min(1380px, 100%);
   margin: 0 auto;
 }
 
@@ -20,7 +20,7 @@
   padding: 30px;
   border: 1px solid #ded9cc;
   border-radius: 30px;
-  background: rgba(255, 253, 247, 0.82);
+  background: rgba(255, 253, 247, 0.88);
   box-shadow: 0 24px 70px rgba(55, 49, 32, 0.08);
 }
 
@@ -36,12 +36,12 @@
 }
 
 .helix-model-hero h1 {
-  max-width: 880px;
+  max-width: 900px;
   margin: 16px 0 12px;
   color: #171a16;
-  font-size: clamp(44px, 7vw, 82px);
-  line-height: 0.94;
-  letter-spacing: -4px;
+  font-size: clamp(40px, 6vw, 74px);
+  line-height: 0.96;
+  letter-spacing: -3.6px;
 }
 
 .helix-model-hero p {
@@ -92,6 +92,343 @@
   font-weight: 750;
 }
 
+.helix-model-learning-layout {
+  display: grid;
+  grid-template-columns: 285px minmax(0, 1fr) 360px;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.helix-model-step-sidebar,
+.helix-model-explain-panel,
+.helix-model-visual-stage {
+  border: 1px solid #ded9cc;
+  border-radius: 30px;
+  background: #fffdf7;
+  box-shadow: 0 24px 70px rgba(55, 49, 32, 0.08);
+}
+
+.helix-model-step-sidebar,
+.helix-model-explain-panel {
+  padding: 22px;
+}
+
+.helix-model-sidebar-label {
+  display: inline-flex;
+  color: #4358a0;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.helix-model-step-sidebar h2,
+.helix-model-explain-panel h2 {
+  margin: 12px 0 18px;
+  color: #171a16;
+  font-size: 28px;
+  line-height: 1.02;
+  letter-spacing: -1px;
+}
+
+.helix-model-step-buttons {
+  display: grid;
+  gap: 10px;
+}
+
+.helix-model-step-button {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #e2ddcf;
+  border-radius: 18px;
+  background: #f8f5ed;
+  color: #171a16;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.helix-model-step-button:hover,
+.helix-model-step-button-active {
+  transform: translateY(-1px);
+  border-color: #4358a0;
+  background: #eef1ff;
+  box-shadow: 0 12px 26px rgba(67, 88, 160, 0.13);
+}
+
+.helix-model-step-button > span {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #171a16;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.helix-model-step-button strong {
+  display: block;
+  color: #171a16;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.helix-model-step-button small {
+  display: block;
+  margin-top: 5px;
+  color: #666a61;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.helix-model-mini-stats {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.helix-model-mini-stats article {
+  padding: 13px;
+  border: 1px solid #e4dfd2;
+  border-radius: 16px;
+  background: #f8f5ed;
+}
+
+.helix-model-mini-stats small,
+.helix-model-visual-top span,
+.helix-model-explain-card span,
+.helix-model-next-test span {
+  display: block;
+  color: #6d7068;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.helix-model-mini-stats strong {
+  display: block;
+  margin-top: 6px;
+  color: #171a16;
+  font-size: 13px;
+}
+
+.helix-model-visual-stage {
+  min-width: 0;
+  padding: 18px;
+}
+
+.helix-model-visual-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.helix-model-visual-top strong {
+  display: block;
+  margin-top: 5px;
+  color: #171a16;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.helix-model-step-counter {
+  flex: none;
+  padding: 8px 11px;
+  border-radius: 999px;
+  background: #171a16;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.helix-model-visual-canvas {
+  position: relative;
+  min-height: 535px;
+  overflow: hidden;
+  border: 1px solid #e1dccf;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.95), transparent 25%),
+    radial-gradient(circle at 82% 24%, rgba(68, 91, 160, 0.09), transparent 28%),
+    #fdfbf4;
+}
+
+.helix-learning-svg {
+  width: 100%;
+  min-height: 535px;
+  height: 100%;
+}
+
+.helix-model-hotspot {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border: 3px solid #fffdf7;
+  border-radius: 999px;
+  background: #4358a0;
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(67, 88, 160, 0.25);
+  font-size: 15px;
+  font-weight: 950;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.helix-model-hotspot:hover,
+.helix-model-hotspot-active {
+  transform: translate(-50%, -50%) scale(1.16);
+  background: #171a16;
+  box-shadow: 0 18px 36px rgba(23, 26, 22, 0.24);
+}
+
+.helix-model-visual-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.helix-model-visual-controls button {
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid #ded9cc;
+  border-radius: 999px;
+  background: #fffdf7;
+  color: #171a16;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.helix-model-visual-controls button:last-child {
+  border-color: #171a16;
+  background: #171a16;
+  color: #ffffff;
+}
+
+.helix-model-visual-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.helix-model-explain-panel {
+  min-width: 0;
+}
+
+.helix-model-student-prompt {
+  margin: -8px 0 18px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #eef1ff;
+  color: #34478f;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.helix-model-explain-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid #e6e0d2;
+}
+
+.helix-model-explain-card > div {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #efeadf;
+  color: #4358a0;
+}
+
+.helix-model-explain-card p {
+  margin: 7px 0 0;
+  color: #55584f;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.helix-model-next-test {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #171a16;
+  color: #ffffff;
+}
+
+.helix-model-next-test span {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.helix-model-next-test strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.helix-model-research-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.helix-model-research-card {
+  padding: 22px;
+  border: 1px solid #ded9cc;
+  border-radius: 24px;
+  background: #fffdf7;
+  box-shadow: 0 18px 46px rgba(55, 49, 32, 0.06);
+}
+
+.helix-model-research-card div {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #efeadf;
+  color: #4358a0;
+}
+
+.helix-model-research-card h3 {
+  margin: 18px 0 9px;
+  color: #171a16;
+  font-size: 22px;
+  line-height: 1.08;
+  letter-spacing: -0.8px;
+}
+
+.helix-model-research-card p {
+  margin: 0;
+  color: #55584f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .helix-model-flow {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -99,40 +436,25 @@
   margin-top: 18px;
 }
 
-.helix-model-step {
-  min-height: 340px;
-  padding: 22px;
+.helix-model-flow-step {
+  min-height: 255px;
+  padding: 20px;
   border: 1px solid #ded9cc;
   border-radius: 24px;
   background: #fffdf7;
   box-shadow: 0 18px 46px rgba(55, 49, 32, 0.06);
-  position: relative;
 }
 
-.helix-model-step::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: -16px;
-  width: 18px;
-  height: 2px;
-  background: #bdb7a9;
-}
-
-.helix-model-step:last-child::after {
-  display: none;
-}
-
-.helix-model-step-top {
+.helix-model-flow-step-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.helix-model-step-top > span {
-  width: 38px;
-  height: 38px;
+.helix-model-flow-step-top > span {
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border-radius: 999px;
@@ -142,7 +464,7 @@
   font-weight: 900;
 }
 
-.helix-model-step-top em {
+.helix-model-flow-step-top em {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -154,24 +476,24 @@
   text-transform: uppercase;
 }
 
-.helix-model-status-supported {
+.helix-model-status-reasonable_starting_point {
   background: #e5f4e8;
   color: #24733d;
 }
 
-.helix-model-status-check {
+.helix-model-status-needs_evidence {
   background: #e8edff;
   color: #4358a0;
 }
 
-.helix-model-status-uncertain {
+.helix-model-status-unresolved {
   background: #fff2c8;
   color: #806016;
 }
 
-.helix-model-step small {
+.helix-model-flow-step small {
   display: block;
-  margin-top: 24px;
+  margin-top: 22px;
   color: #6d7068;
   font-size: 11px;
   font-weight: 900;
@@ -179,72 +501,222 @@
   text-transform: uppercase;
 }
 
-.helix-model-step h2 {
+.helix-model-flow-step h2 {
   margin: 10px 0 10px;
   color: #171a16;
-  font-size: 29px;
-  line-height: 1.02;
-  letter-spacing: -1.2px;
-}
-
-.helix-model-step p {
-  margin: 0;
-  color: #55584f;
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-.helix-model-card-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.helix-model-info-card {
-  padding: 22px;
-  border: 1px solid #ded9cc;
-  border-radius: 24px;
-  background: #fffdf7;
-  box-shadow: 0 18px 46px rgba(55, 49, 32, 0.06);
-}
-
-.helix-model-info-card div {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: 16px;
-  background: #efeadf;
-  color: #4358a0;
-}
-
-.helix-model-info-card h3 {
-  margin: 18px 0 9px;
-  color: #171a16;
   font-size: 24px;
-  line-height: 1.08;
-  letter-spacing: -0.8px;
+  line-height: 1.05;
+  letter-spacing: -0.9px;
 }
 
-.helix-model-info-card p {
+.helix-model-flow-step p {
   margin: 0;
   color: #55584f;
   font-size: 14px;
   line-height: 1.6;
 }
 
-@media (max-width: 1100px) {
-  .helix-model-flow {
+/* SVG styling */
+
+.svg-title {
+  fill: #171a16;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.svg-small {
+  fill: #62665e;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.svg-label {
+  fill: #4358a0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.svg-node {
+  fill: #e8edff;
+  stroke: #4358a0;
+  stroke-width: 4;
+}
+
+.svg-secondary {
+  fill: #fff2c8;
+  stroke: #b98922;
+  stroke-width: 4;
+}
+
+.svg-danger {
+  fill: #ffe6de;
+  stroke: #b75a3a;
+  stroke-width: 4;
+}
+
+.svg-active {
+  filter: drop-shadow(0 12px 18px rgba(67, 88, 160, 0.28));
+  stroke-width: 7;
+}
+
+.svg-active-stroke {
+  filter: drop-shadow(0 12px 18px rgba(67, 88, 160, 0.28));
+  stroke-width: 9;
+}
+
+.svg-active-group {
+  filter: drop-shadow(0 12px 18px rgba(67, 88, 160, 0.28));
+}
+
+.svg-arrow {
+  fill: none;
+  stroke: #171a16;
+  stroke-width: 5;
+  stroke-linecap: round;
+  marker-end: url(#helix-arrow);
+}
+
+.svg-cell {
+  fill: #eef4e9;
+  stroke: #6b8f59;
+  stroke-width: 5;
+}
+
+.svg-nucleus {
+  fill: #d8e6ff;
+  stroke: #4358a0;
+  stroke-width: 4;
+}
+
+.svg-squiggle {
+  fill: none;
+  stroke: #24733d;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.svg-neuron {
+  fill: #ffe7bd;
+  stroke: #b98922;
+  stroke-width: 5;
+}
+
+.svg-axon,
+.svg-dendrite {
+  fill: none;
+  stroke: #b98922;
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.svg-brain {
+  fill: #ffe1d6;
+  stroke: #b75a3a;
+  stroke-width: 6;
+}
+
+.svg-brain-line {
+  fill: none;
+  stroke: rgba(183, 90, 58, 0.55);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.svg-impact {
+  stroke: #171a16;
+  stroke-width: 9;
+  stroke-linecap: round;
+}
+
+.svg-injury-zone {
+  fill: rgba(183, 90, 58, 0.22);
+  stroke: #b75a3a;
+  stroke-width: 5;
+}
+
+.svg-dna-a,
+.svg-dna-b {
+  fill: none;
+  stroke: #4358a0;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.svg-dna-rung {
+  stroke: #8c99cf;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.svg-guide {
+  fill: none;
+  stroke: #24733d;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.svg-cas9 {
+  fill: #fff2c8;
+  stroke: #b98922;
+  stroke-width: 5;
+}
+
+.svg-pam {
+  fill: #e5f4e8;
+  stroke: #24733d;
+  stroke-width: 4;
+}
+
+.svg-membrane {
+  fill: #e8edff;
+  stroke: #4358a0;
+  stroke-width: 4;
+}
+
+.svg-receptor {
+  fill: #fff2c8;
+  stroke: #b98922;
+  stroke-width: 5;
+}
+
+.svg-pocket {
+  fill: none;
+  stroke: #7b5a12;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.svg-drug {
+  fill: #e5f4e8;
+  stroke: #24733d;
+  stroke-width: 5;
+}
+
+.svg-bond {
+  stroke: #24733d;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.svg-signal {
+  fill: none;
+  stroke: #4358a0;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+@media (max-width: 1240px) {
+  .helix-model-learning-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .helix-model-step-buttons {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .helix-model-step::after {
-    display: none;
-  }
-
-  .helix-model-card-grid {
-    grid-template-columns: 1fr;
+  .helix-model-research-grid,
+  .helix-model-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -257,7 +729,31 @@
     flex-direction: column;
   }
 
+  .helix-model-step-buttons,
+  .helix-model-research-grid,
   .helix-model-flow {
     grid-template-columns: 1fr;
+  }
+
+  .helix-model-visual-canvas {
+    min-height: 390px;
+    overflow-x: auto;
+  }
+
+  .helix-learning-svg {
+    width: 760px;
+    min-height: 390px;
+  }
+
+  .helix-model-visual-top {
+    flex-direction: column;
+  }
+
+  .helix-model-visual-controls {
+    justify-content: stretch;
+  }
+
+  .helix-model-visual-controls button {
+    flex: 1;
   }
 }

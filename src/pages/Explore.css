@@ -492,3 +492,112 @@
     grid-template-columns: 1fr;
   }
 }
+.helix-connections-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.helix-connections-summary-grid article {
+  padding: 16px;
+  border: 1px solid #ded9cc;
+  border-radius: 18px;
+  background: #fffdf7;
+}
+
+.helix-connections-summary-grid span,
+.helix-relationship-detail-grid span {
+  display: block;
+  color: #6d7068;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.helix-connections-summary-grid strong,
+.helix-relationship-detail-grid strong {
+  display: block;
+  margin-top: 7px;
+  color: #171a16;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.helix-relationship-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.helix-relationship-detail-grid section {
+  padding: 12px;
+  border: 1px solid #e4dfd2;
+  border-radius: 14px;
+  background: #f8f5ed;
+}
+
+.helix-relationship-confidence {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 14px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: #e8edff;
+  color: #4358a0;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .helix-connections-summary-grid,
+  .helix-relationship-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Remove unnecessary empty vertical space */
+
+.helix-explore-entry {
+  min-height: auto;
+  padding-bottom: 32px;
+}
+
+.helix-explore-entry-center {
+  min-height: auto;
+  padding-top: 56px;
+  padding-bottom: 56px;
+}
+
+.helix-explore-workspace {
+  min-height: auto;
+}
+
+.helix-explore-content {
+  min-height: auto;
+}
+
+.helix-model-page {
+  min-height: auto;
+  padding-top: 24px;
+  padding-bottom: 32px;
+}
+
+.helix-agent-page {
+  min-height: auto;
+}
+
+@media (max-width: 760px) {
+  .helix-explore-entry-center {
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+
+  .helix-model-page {
+    padding-top: 18px;
+    padding-bottom: 24px;
+  }
+}

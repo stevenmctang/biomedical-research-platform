@@ -28,6 +28,7 @@ import { AgentResearchWorkspace } from '../components/AgentResearchWorkspace'
 import { EvidenceWorkspace } from '../components/EvidenceWorkspace'
 import { ResearchVisualization } from '../components/ResearchVisualization'
 import { generateResearchMap } from '../utils/generateResearchMap'
+import { analyzeResearchQuestion } from '../utils/researchIntelligence'
 
 import type {
   ResearchMap,
@@ -42,17 +43,6 @@ type WorkspaceTab =
   | 'visualize'
   | 'connections'
 
-type FlexibleEdge = {
-  id: string
-  sourceId?: string
-  targetId?: string
-  sourceIds?: string[]
-  targetIds?: string[]
-  label?: string
-  explanation?: string
-  evidenceStrength?: ResearchNode['evidenceStrength']
-}
-
 function createFallbackMap(question: string): ResearchMap {
   const fallbackMap = {
     question,
@@ -66,17 +56,6 @@ function createFallbackMap(question: string): ResearchMap {
         subtitle: 'Research question',
         description:
           'The main investigation question submitted by the user.',
-        evidenceStrength: 'unknown',
-        sourceIds: [],
-      },
-      {
-        id: 'overview',
-        type: 'concept',
-        domain: 'Biomedical Science',
-        label: 'Topic overview',
-        subtitle: 'Initial explanation',
-        description:
-          'A plain-language summary is needed before evaluating mechanisms or evidence.',
         evidenceStrength: 'unknown',
         sourceIds: [],
       },
@@ -116,28 +95,19 @@ function createFallbackMap(question: string): ResearchMap {
     ],
     edges: [
       {
-        id: 'edge-question-overview',
+        id: 'edge-question-mechanism',
         sourceIds: ['question'],
-        targetIds: ['overview'],
-        label: 'frames',
-        explanation:
-          'The research question frames the topic that needs to be explained.',
-        evidenceStrength: 'unknown',
-      },
-      {
-        id: 'edge-overview-mechanism',
-        sourceIds: ['overview'],
         targetIds: ['mechanism'],
-        label: 'leads to',
+        label: 'generates',
         explanation:
-          'A topic overview helps generate candidate mechanisms.',
+          'The research question generates a candidate mechanism that needs to be verified.',
         evidenceStrength: 'unknown',
       },
       {
         id: 'edge-mechanism-evidence',
         sourceIds: ['mechanism'],
         targetIds: ['evidence'],
-        label: 'requires support from',
+        label: 'requires evidence',
         explanation:
           'A mechanism should be checked against scholarly evidence before being treated as reliable.',
         evidenceStrength: 'unknown',
@@ -148,21 +118,13 @@ function createFallbackMap(question: string): ResearchMap {
         targetIds: ['test'],
         label: 'suggests',
         explanation:
-          'Evidence gaps can point toward the next useful experiment or test.',
+          'Evidence gaps can point toward the next useful experiment or verification step.',
         evidenceStrength: 'limited',
       },
     ],
   }
 
   return fallbackMap as unknown as ResearchMap
-}
-
-function getFirstSourceId(edge: FlexibleEdge) {
-  return edge.sourceId || edge.sourceIds?.[0] || ''
-}
-
-function getFirstTargetId(edge: FlexibleEdge) {
-  return edge.targetId || edge.targetIds?.[0] || ''
 }
 
 function getNodeIcon(node: ResearchNode) {
@@ -224,18 +186,39 @@ function getEvidenceClass(value: ResearchNode['evidenceStrength']) {
   return 'helix-connection-pill-unknown'
 }
 
+function formatDomain(value: string) {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function formatReliability(value: string) {
+  if (value === 'specific') {
+    return 'Specific'
+  }
+
+  if (value === 'partial') {
+    return 'Partial'
+  }
+
+  return 'Limited'
+}
+
 function ConnectionsView({
   map,
 }: {
   map: ResearchMap
 }) {
-  const visibleNodes = useMemo(
-    () => map.nodes.filter((node) => node.type !== 'question'),
+  const researchAnalysis = useMemo(
+    () => analyzeResearchQuestion(map.question, map),
     [map],
   )
 
-  const relationshipClaims = useMemo(
-    () => map.edges as unknown as FlexibleEdge[],
+  const visibleNodes = useMemo(
+    () =>
+      map.nodes
+        .filter((node) => node.type !== 'question')
+        .slice(0, 6),
     [map],
   )
 
@@ -244,17 +227,15 @@ function ConnectionsView({
       <section className="helix-connections-shell">
         <header className="helix-connections-hero">
           <span className="helix-connections-kicker">
-            Connections board
+            Evidence-aware connections
           </span>
 
           <h1>
-            Evidence, mechanisms, and relationships.
+            Relationship claims for {researchAnalysis.topicLabel}.
           </h1>
 
           <p>
-            This view is no longer the main experience. It is a support board
-            that helps users inspect how Helix connected concepts, evidence,
-            and testable research directions.
+            {researchAnalysis.explanation}
           </p>
         </header>
 
@@ -268,11 +249,53 @@ function ConnectionsView({
           </strong>
         </section>
 
+        <section className="helix-connections-summary-grid">
+          <article>
+            <span>
+              Domain
+            </span>
+
+            <strong>
+              {formatDomain(researchAnalysis.domain)}
+            </strong>
+          </article>
+
+          <article>
+            <span>
+              Question type
+            </span>
+
+            <strong>
+              {formatDomain(researchAnalysis.questionType)}
+            </strong>
+          </article>
+
+          <article>
+            <span>
+              Reliability
+            </span>
+
+            <strong>
+              {formatReliability(researchAnalysis.reliability)}
+            </strong>
+          </article>
+
+          <article>
+            <span>
+              Evidence query
+            </span>
+
+            <strong>
+              {researchAnalysis.evidenceQuery}
+            </strong>
+          </article>
+        </section>
+
         <section className="helix-connections-grid">
           <div className="helix-connections-column">
             <div className="helix-connections-section-heading">
               <span>
-                Key concepts
+                Key concepts from map
               </span>
 
               <strong>
@@ -321,49 +344,81 @@ function ConnectionsView({
           <div className="helix-connections-column">
             <div className="helix-connections-section-heading">
               <span>
-                Relationship claims
+                Deeper relationship claims
               </span>
 
               <strong>
-                {relationshipClaims.length}
+                {researchAnalysis.connections.length}
               </strong>
             </div>
 
             <div className="helix-relationship-list">
-              {relationshipClaims.map((edge, index) => {
-                const sourceId = getFirstSourceId(edge)
-                const targetId = getFirstTargetId(edge)
+              {researchAnalysis.connections.map((connection, index) => (
+                <article
+                  key={connection.id}
+                  className="helix-relationship-card"
+                >
+                  <div className="helix-relationship-number">
+                    {String(index + 1).padStart(2, '0')}
+                  </div>
 
-                const source = map.nodes.find((node) => node.id === sourceId)
-                const target = map.nodes.find((node) => node.id === targetId)
+                  <div>
+                    <h3>
+                      {connection.source} → {connection.target}
+                    </h3>
 
-                return (
-                  <article
-                    key={edge.id}
-                    className="helix-relationship-card"
-                  >
-                    <div className="helix-relationship-number">
-                      {String(index + 1).padStart(2, '0')}
+                    <p>
+                      {connection.claim}
+                    </p>
+
+                    <div className="helix-relationship-detail-grid">
+                      <section>
+                        <span>
+                          Why it matters
+                        </span>
+
+                        <strong>
+                          {connection.whyItMatters}
+                        </strong>
+                      </section>
+
+                      <section>
+                        <span>
+                          Evidence needed
+                        </span>
+
+                        <strong>
+                          {connection.evidenceNeeded}
+                        </strong>
+                      </section>
+
+                      <section>
+                        <span>
+                          Uncertainty
+                        </span>
+
+                        <strong>
+                          {connection.uncertainty}
+                        </strong>
+                      </section>
+
+                      <section>
+                        <span>
+                          Next verification
+                        </span>
+
+                        <strong>
+                          {connection.nextVerificationStep}
+                        </strong>
+                      </section>
                     </div>
 
-                    <div>
-                      <h3>
-                        {source?.label ?? sourceId} → {target?.label ?? targetId}
-                      </h3>
-
-                      <p>
-                        {edge.explanation ||
-                          edge.label ||
-                          'Generated relationship claim.'}
-                      </p>
-
-                      <span>
-                        Verification needed before treating this as a supported claim.
-                      </span>
-                    </div>
-                  </article>
-                )
-              })}
+                    <em className="helix-relationship-confidence">
+                      {connection.confidence}% confidence · hypothesis, not proven
+                    </em>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
@@ -420,7 +475,10 @@ export default function Explore() {
     return (
       <main className="helix-explore-entry">
         <header className="helix-explore-entry-nav">
-          <Link to="/" className="helix-explore-brand">
+          <Link
+            to="/"
+            className="helix-explore-brand"
+          >
             Helix
           </Link>
 
@@ -469,7 +527,10 @@ export default function Explore() {
             >
               {isGenerating ? (
                 <>
-                  <LoaderCircle className="helix-explore-spin" size={18} />
+                  <LoaderCircle
+                    className="helix-explore-spin"
+                    size={18}
+                  />
 
                   Starting investigation...
                 </>
@@ -522,7 +583,6 @@ export default function Explore() {
       </main>
     )
   }
-
 
   return (
     <main className="helix-explore-workspace">
