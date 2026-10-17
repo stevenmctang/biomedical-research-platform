@@ -15,6 +15,7 @@ import {
 import {
   useMemo,
   useEffect,
+  useRef,
   useState,
 } from 'react'
 
@@ -26,6 +27,7 @@ import {
   Link,
   useNavigate,
   useParams,
+  useSearchParams,
 } from 'react-router-dom'
 import { useAuthSession } from '../auth/AuthSession'
 
@@ -53,6 +55,45 @@ type WorkspaceTab =
   | 'evidence'
   | 'visualize'
   | 'connections'
+
+interface GraphEvidenceContext {
+  sourceId: string
+  sourceLabel: string
+  sourceType: string
+  targetId: string
+  targetLabel: string
+  targetType: string
+  relationship: string
+  associationId: string
+  evidenceCodes: string[]
+  knowledgeSource: string
+  question: string
+}
+
+function readGraphEvidenceContext(params: URLSearchParams): GraphEvidenceContext | null {
+  const sourceLabel = params.get('sourceLabel')?.trim()
+  const targetLabel = params.get('targetLabel')?.trim()
+  const relationship = params.get('relationship')?.trim()
+  if (!sourceLabel || !targetLabel || !relationship) return null
+
+  const sourceType = params.get('sourceType')?.trim() ?? ''
+  const targetType = params.get('targetType')?.trim() ?? ''
+  const readableRelationship = relationship.replace(/-/g, ' ')
+
+  return {
+    sourceId: params.get('sourceId') ?? '',
+    sourceLabel,
+    sourceType,
+    targetId: params.get('targetId') ?? '',
+    targetLabel,
+    targetType,
+    relationship,
+    associationId: params.get('associationId') ?? '',
+    evidenceCodes: (params.get('evidenceCodes') ?? '').split(',').filter(Boolean),
+    knowledgeSource: params.get('knowledgeSource') ?? '',
+    question: `What evidence supports the relationship between ${sourceLabel} and ${targetLabel} (${readableRelationship})?`,
+  }
+}
 
 function createFallbackMap(question: string): ResearchMap {
   const fallbackMap = {
@@ -442,15 +483,44 @@ function ConnectionsView({
 export default function Explore() {
   const navigate = useNavigate()
   const { projectId: routeProjectId } = useParams()
+  const [searchParams] = useSearchParams()
   const { userId } = useAuthSession()
+  const graphContext = useMemo(
+    () => readGraphEvidenceContext(searchParams),
+    [searchParams],
+  )
+  const graphContextKey = graphContext?.associationId || (
+    graphContext
+      ? `${graphContext.sourceId}:${graphContext.targetId}:${graphContext.relationship}`
+      : ''
+  )
+  const startedGraphContext = useRef('')
 
-  const [question, setQuestion] = useState('')
+  const [question, setQuestion] = useState(graphContext?.question ?? '')
   const [map, setMap] = useState<ResearchMap | null>(null)
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('agent')
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!graphContext || !graphContextKey || startedGraphContext.current === graphContextKey) return
+    startedGraphContext.current = graphContextKey
+    setQuestion(graphContext.question)
+    setActiveTab('evidence')
+    setIsGenerating(true)
+    setError(null)
+
+    try {
+      setMap(generateResearchMap(graphContext.question))
+    } catch (generationError) {
+      console.error('Graph relationship investigation failed:', generationError)
+      setMap(createFallbackMap(graphContext.question))
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [graphContext, graphContextKey])
 
   useEffect(() => {
     if (!routeProjectId || !userId) {
@@ -564,7 +634,7 @@ export default function Explore() {
     setMap(null)
     setActiveTab('agent')
     setError(null)
-    if (routeProjectId) navigate('/explore', { replace: true })
+    if (routeProjectId || graphContext) navigate('/explore', { replace: true })
   }
 
   if (!map) {
@@ -590,6 +660,7 @@ export default function Explore() {
         </header>
 
         <section className="helix-explore-entry-center">
+          {graphContext && <GraphContextBanner context={graphContext} />}
           <div className="helix-explore-kicker">
             <Sparkles size={16} />
 
@@ -770,6 +841,7 @@ export default function Explore() {
       </header>
 
       <section className="helix-explore-content">
+        {graphContext && <GraphContextBanner context={graphContext} />}
         {activeTab === 'agent' && (
           <AgentResearchWorkspace
             map={map}
@@ -798,5 +870,25 @@ export default function Explore() {
         )}
       </section>
     </main>
+  )
+}
+
+function GraphContextBanner({ context }: { context: GraphEvidenceContext }) {
+  return (
+    <aside className="helix-graph-evidence-context" aria-label="Relationship from knowledge graph">
+      <span>From Knowledge Graph</span>
+      <strong>
+        {context.sourceLabel}{context.sourceType ? ` (${context.sourceType})` : ''}
+        {' '}{context.relationship.replace(/-/g, ' ')}{' '}
+        {context.targetLabel}{context.targetType ? ` (${context.targetType})` : ''}
+      </strong>
+      {(context.evidenceCodes.length > 0 || context.knowledgeSource) && (
+        <small>
+          {context.evidenceCodes.length > 0 && `Evidence codes: ${context.evidenceCodes.join(', ')}`}
+          {context.evidenceCodes.length > 0 && context.knowledgeSource && ' · '}
+          {context.knowledgeSource && `Knowledge source: ${context.knowledgeSource}`}
+        </small>
+      )}
+    </aside>
   )
 }

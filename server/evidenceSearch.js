@@ -1,4 +1,56 @@
+import { XMLParser } from 'fast-xml-parser'
+
 const MAX_RESULTS_PER_SOURCE = 8
+const pubmedXmlParser = new XMLParser({ ignoreAttributes: false, trimValues: true })
+
+function toArray(value) {
+  if (value === undefined || value === null) return []
+  return Array.isArray(value) ? value : [value]
+}
+
+function textValue(value) {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+  }
+  if (!value || typeof value !== 'object') return ''
+  if ('#text' in value) return String(value['#text'])
+  return ''
+}
+
+async function fetchPubMedAbstracts(ids) {
+  if (ids.length === 0) return new Map()
+
+  try {
+    const params = new URLSearchParams({
+      db: 'pubmed',
+      id: ids.join(','),
+      rettype: 'abstract',
+      retmode: 'xml',
+      tool: 'helix_research_explorer',
+    })
+    const response = await fetch(
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?${params}`,
+      { headers: { Accept: 'application/xml' } },
+    )
+    if (!response.ok) return new Map()
+
+    const parsed = pubmedXmlParser.parse(await response.text())
+    const articles = toArray(parsed.PubmedArticleSet?.PubmedArticle)
+    return new Map(articles.flatMap((article) => {
+      const citation = article.MedlineCitation
+      const id = textValue(citation?.PMID)
+      const sections = toArray(citation?.Article?.Abstract?.AbstractText)
+      const abstract = sections.map((section) => {
+        const label = section?.['@_Label']
+        const text = textValue(section)
+        return label && text ? `${label}: ${text}` : text
+      }).filter(Boolean).join(' ')
+      return id && abstract ? [[id, abstract]] : []
+    }))
+  } catch {
+    return new Map()
+  }
+}
 
 function cleanQuery(value) {
   return String(value || '')
@@ -95,17 +147,17 @@ function dedupeArticles(articles) {
 
 function rankArticles(articles) {
   return [...articles].sort((a, b) => {
-    const aScore =
-      Number(a.citationCount || 0) +
-      (a.abstract ? 20 : 0) +
-      (a.doi ? 10 : 0) +
-      (a.url ? 5 : 0)
+    const score = (article) =>
+      (article.provider === 'PubMed' ? 1000 : 0) +
+      (/meta-analysis|systematic review/i.test(article.type || '') ? 100 : 0) +
+      (/randomi[sz]ed|clinical trial|observational study/i.test(article.type || '') ? 50 : 0) +
+      Number(article.citationCount || 0) +
+      (article.abstract ? 20 : 0) +
+      (article.doi ? 10 : 0) +
+      (article.url ? 5 : 0)
 
-    const bScore =
-      Number(b.citationCount || 0) +
-      (b.abstract ? 20 : 0) +
-      (b.doi ? 10 : 0) +
-      (b.url ? 5 : 0)
+    const aScore = score(a)
+    const bScore = score(b)
 
     return bScore - aScore
   })
@@ -215,6 +267,7 @@ async function searchPubMed(query) {
   }
 
   const summaryData = await summaryResponse.json()
+  const abstracts = await fetchPubMedAbstracts(ids)
 
   return ids.flatMap((id) => {
     const record = summaryData.result?.[id]
@@ -229,7 +282,7 @@ async function searchPubMed(query) {
       title: record.title,
       source: record.fulljournalname || record.source || 'PubMed',
       year: String(record.pubdate || '').match(/\d{4}/)?.[0] || 'Unknown year',
-      abstract: '',
+      abstract: abstracts.get(pubmedId) || '',
       authors: Array.isArray(record.authors)
         ? record.authors.slice(0, 6).map((author) => author.name).filter(Boolean)
         : [],

@@ -24,6 +24,9 @@ interface EvidenceArticle {
   pubmedId: string
   provider: string
   type: string
+  abstract?: string
+  authors?: string[]
+  citationCount?: number
 }
 
 interface EvidenceApiResponse {
@@ -67,7 +70,12 @@ export function EdgeDetailPanel({
         if (!response.ok) throw new Error(`Literature search failed (${response.status})`)
         return response.json() as Promise<EvidenceApiResponse>
       })
-      .then((data) => setRelatedArticles((data.articles ?? []).slice(0, 3)))
+      .then((data) => {
+        const articles = data.articles ?? []
+        const indexed = articles.filter((article) => article.provider === 'PubMed')
+        const additional = articles.filter((article) => article.provider !== 'PubMed')
+        setRelatedArticles([...indexed, ...additional].slice(0, 3))
+      })
       .catch((error: unknown) => {
         if (!controller.signal.aborted) {
           setRelatedError(error instanceof Error ? error.message : 'Literature search failed.')
@@ -152,92 +160,14 @@ export function EdgeDetailPanel({
         )}
       </div>
 
-      <dl className="kg-edge-meta">
-        <div className="kg-edge-meta-row">
-          <dt>Relationship type</dt>
-          <dd>{relLabel}</dd>
-        </div>
-        <div className="kg-edge-meta-row">
-          <dt>Evidence strength</dt>
-          <dd>
-            {edge.evidence ? (
-              <span className={`kg-edge-evidence kg-edge-evidence--${edge.evidence}`}>
-                {edge.evidence}
-              </span>
-            ) : (
-              'Unrated: no direct evidence grade supplied by Monarch'
-            )}
-          </dd>
-        </div>
-        <div className="kg-edge-meta-row">
-          <dt>Evidence codes</dt>
-          <dd>
-            {edge.evidenceCodes && edge.evidenceCodes.length > 0
-              ? edge.evidenceCodes.join(', ')
-              : 'No evidence codes supplied by Monarch'}
-          </dd>
-        </div>
-        <div className="kg-edge-meta-row">
-          <dt>Sources</dt>
-          <dd>
-            {sources.length > 0 ? (
-              <ul className="kg-edge-sources">
-                {sources.map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            ) : (
-              'No source attribution supplied by Monarch'
-            )}
-          </dd>
-        </div>
-        <div className="kg-edge-meta-row">
-          <dt>First reported</dt>
-          <dd>
-            {detail?.createdDate || edge.updateDate
-              ? formatDate(detail?.createdDate || edge.updateDate)
-              : 'No date supplied by Monarch'}
-          </dd>
-        </div>
-        <div className="kg-edge-meta-row">
-          <dt>Recent evidence</dt>
-          <dd>
-            {detail?.updateDate || edge.updateDate
-              ? formatDate(detail?.updateDate || edge.updateDate)
-              : 'No update date supplied by Monarch'}
-          </dd>
-        </div>
-      </dl>
-
-      {loadingDetail && (
-        <div className="kg-edge-loading">
-          <Loader2 size={14} className="kg-spin-icon" />
-          <span>Loading association details…</span>
-        </div>
-      )}
-
-      {detail && detail.publications.length > 0 && (
-        <div className="kg-edge-pubs">
-          <p className="kg-edge-pubs-title">Publications</p>
-          <ul className="kg-edge-pubs-list">
-            {detail.publications.slice(0, 5).map((pub, i) => (
-              <li key={i}>
-                {publicationUrl(pub) ? (
-                  <a href={publicationUrl(pub)} target="_blank" rel="noreferrer">
-                    {pub} <ExternalLink size={11} />
-                  </a>
-                ) : pub}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <section className="kg-edge-literature" aria-live="polite">
         <div className="kg-edge-literature-heading">
-          <span>Related literature candidates</span>
+          <span>Literature for this relationship</span>
           {loadingRelated && <Loader2 size={13} className="kg-spin-icon" />}
         </div>
+        <p className="kg-edge-literature-note">
+          Search-index matches are literature leads; review the paper to confirm it supports this specific connection.
+        </p>
 
         {relatedArticles.map((article) => {
           const assessment = assessEvidence(article)
@@ -250,6 +180,13 @@ export function EdgeDetailPanel({
               <span title={`${assessment.sourceReason} ${assessment.strengthReason}`}>
                 {assessment.sourceLabel} · {assessment.strengthLabel} evidence
               </span>
+              {article.abstract && (
+                <p className="kg-edge-literature-abstract">
+                  {article.abstract.length > 300
+                    ? `${article.abstract.slice(0, 300)}…`
+                    : article.abstract}
+                </p>
+              )}
             </article>
           )
         })}
@@ -275,6 +212,69 @@ export function EdgeDetailPanel({
           Search NLM PubMed <ExternalLink size={11} />
         </a>
       </section>
+
+      <dl className="kg-edge-meta">
+        {edge.evidence && <div className="kg-edge-meta-row">
+          <dt>Evidence strength</dt>
+          <dd>
+            <span className={`kg-edge-evidence kg-edge-evidence--${edge.evidence}`}>
+              {edge.evidence}
+            </span>
+          </dd>
+        </div>}
+        {edge.evidenceCodes && edge.evidenceCodes.length > 0 && <div className="kg-edge-meta-row">
+          <dt>Evidence codes</dt>
+          <dd>{edge.evidenceCodes.join(', ')}</dd>
+        </div>}
+        {sources.length > 0 && <div className="kg-edge-meta-row">
+          <dt>Sources</dt>
+          <dd>
+            <ul className="kg-edge-sources">
+              {sources.map((s, i) => (
+                <li key={i}>{s}</li>
+              ))}
+            </ul>
+          </dd>
+        </div>}
+        {(detail?.createdDate || edge.updateDate) && <div className="kg-edge-meta-row">
+          <dt>First reported</dt>
+          <dd>{formatDate(detail?.createdDate || edge.updateDate || '')}</dd>
+        </div>}
+        {(detail?.updateDate || edge.updateDate) && <div className="kg-edge-meta-row">
+          <dt>Recent evidence</dt>
+          <dd>{formatDate(detail?.updateDate || edge.updateDate || '')}</dd>
+        </div>}
+      </dl>
+
+      {!edge.evidence && !edge.evidenceCodes?.length && sources.length === 0 && !edge.updateDate && !detail?.createdDate && !detail?.updateDate && (
+        <p className="kg-edge-literature-note kg-edge-monarch-note">
+          Monarch does not provide a direct evidence grade or citation for this association. The literature above comes from independent public indexes.
+        </p>
+      )}
+
+      {loadingDetail && (
+        <div className="kg-edge-loading">
+          <Loader2 size={14} className="kg-spin-icon" />
+          <span>Loading association details…</span>
+        </div>
+      )}
+
+      {detail && detail.publications.length > 0 && (
+        <div className="kg-edge-pubs">
+          <p className="kg-edge-pubs-title">Publications</p>
+          <ul className="kg-edge-pubs-list">
+            {detail.publications.slice(0, 5).map((pub, i) => (
+              <li key={i}>
+                {publicationUrl(pub) ? (
+                  <a href={publicationUrl(pub)} target="_blank" rel="noreferrer">
+                    {pub} <ExternalLink size={11} />
+                  </a>
+                ) : pub}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <button
         type="button"
