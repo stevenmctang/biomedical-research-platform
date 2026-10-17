@@ -20,11 +20,17 @@ const publishableKey =
     .VITE_CLERK_PUBLISHABLE_KEY
 
 
-if (!publishableKey) {
-  throw new Error(
-    'Missing VITE_CLERK_PUBLISHABLE_KEY in .env.local',
-  )
-}
+const app = publishableKey ? (
+  <ClerkProvider
+    publishableKey={
+      publishableKey
+    }
+  >
+    <App />
+  </ClerkProvider>
+) : (
+  <App />
+)
 
 
 createRoot(
@@ -33,14 +39,6 @@ createRoot(
   )!,
 ).render(
   <StrictMode>
-
-    <ClerkProvider
-      publishableKey={
-        publishableKey
-      }
-    >
-      <App />
-    </ClerkProvider>
-
+    {app}
   </StrictMode>,
 )
