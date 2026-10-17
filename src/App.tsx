@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useMemo,
   useState,
 } from 'react'
@@ -99,6 +101,12 @@ interface DiscoveryEdge {
 
 const PROJECTS_KEY =
   'helix.researchProjects.v1'
+
+const GraphPage = lazy(() =>
+  import('./pages/GraphPage').then(({ GraphPage }) => ({
+    default: GraphPage,
+  })),
+)
 
 const ACTIVE_PROJECT_ID_KEY =
   'helix.activeProjectId.v1'
@@ -566,7 +574,9 @@ function AppRoutes() {
       <Route
         path="/graph"
         element={
-          <DiscoveryGraphPage />
+          <Suspense fallback={<div role="status">Loading knowledge graph…</div>}>
+            <GraphPage />
+          </Suspense>
         }
       />
 
@@ -1386,7 +1396,7 @@ function ProjectsPage() {
   )
 }
 
-function DiscoveryGraphPage() {
+export function DiscoveryGraphPage() {
   const navigate =
     useNavigate()
 
