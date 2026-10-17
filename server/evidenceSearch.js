@@ -48,8 +48,7 @@ function normalizeUrl(value) {
 }
 
 function dedupeArticles(articles) {
-  const seen = new Set()
-  const unique = []
+  const unique = new Map()
 
   articles.forEach((article) => {
     const titleKey = String(article.title || '')
@@ -62,15 +61,36 @@ function dedupeArticles(articles) {
 
     const key = doiKey || titleKey
 
-    if (!key || seen.has(key)) {
+    if (!key) return
+
+    const existing = unique.get(key)
+    if (!existing) {
+      unique.set(key, article)
       return
     }
 
-    seen.add(key)
-    unique.push(article)
+    const preferred =
+      article.provider === 'PubMed' ? article : existing
+    const additional = preferred === article ? existing : article
+
+    unique.set(key, {
+      ...additional,
+      ...preferred,
+      abstract: preferred.abstract || additional.abstract,
+      authors: preferred.authors?.length
+        ? preferred.authors
+        : additional.authors,
+      citationCount: Math.max(
+        Number(preferred.citationCount || 0),
+        Number(additional.citationCount || 0),
+      ),
+      doi: preferred.doi || additional.doi,
+      openAccessPdf: preferred.openAccessPdf || additional.openAccessPdf,
+      pubmedId: preferred.pubmedId || additional.pubmedId,
+    })
   })
 
-  return unique
+  return [...unique.values()]
 }
 
 function rankArticles(articles) {
@@ -155,6 +175,75 @@ async function searchSemanticScholar(query) {
         openAccessPdf: paper.openAccessPdf?.url || '',
       }
     })
+}
+
+async function searchPubMed(query) {
+  const searchParams = new URLSearchParams({
+    db: 'pubmed',
+    term: query,
+    retmode: 'json',
+    retmax: String(MAX_RESULTS_PER_SOURCE),
+    sort: 'relevance',
+    tool: 'helix_research_explorer',
+  })
+  const searchResponse = await fetch(
+    `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${searchParams}`,
+    { headers: { Accept: 'application/json' } },
+  )
+
+  if (!searchResponse.ok) {
+    throw new Error(`PubMed search returned ${searchResponse.status}`)
+  }
+
+  const searchData = await searchResponse.json()
+  const ids = searchData.esearchresult?.idlist || []
+  if (ids.length === 0) return []
+
+  const summaryParams = new URLSearchParams({
+    db: 'pubmed',
+    id: ids.join(','),
+    retmode: 'json',
+    tool: 'helix_research_explorer',
+  })
+  const summaryResponse = await fetch(
+    `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${summaryParams}`,
+    { headers: { Accept: 'application/json' } },
+  )
+
+  if (!summaryResponse.ok) {
+    throw new Error(`PubMed summary returned ${summaryResponse.status}`)
+  }
+
+  const summaryData = await summaryResponse.json()
+
+  return ids.flatMap((id) => {
+    const record = summaryData.result?.[id]
+    if (!record?.title) return []
+
+    const articleIds = record.articleids || []
+    const doi = articleIds.find((item) => item.idtype === 'doi')?.value || ''
+    const pubmedId = articleIds.find((item) => item.idtype === 'pubmed')?.value || id
+
+    return [{
+      id: `pubmed-${pubmedId}`,
+      title: record.title,
+      source: record.fulljournalname || record.source || 'PubMed',
+      year: String(record.pubdate || '').match(/\d{4}/)?.[0] || 'Unknown year',
+      abstract: '',
+      authors: Array.isArray(record.authors)
+        ? record.authors.slice(0, 6).map((author) => author.name).filter(Boolean)
+        : [],
+      url: `https://pubmed.ncbi.nlm.nih.gov/${pubmedId}/`,
+      doi,
+      pubmedId,
+      citationCount: 0,
+      provider: 'PubMed',
+      type: Array.isArray(record.pubtype) && record.pubtype.length > 0
+        ? record.pubtype.join(', ')
+        : 'Publication type not reported',
+      openAccessPdf: '',
+    }]
+  })
 }
 
 async function searchOpenAlex(query) {
@@ -309,6 +398,7 @@ export async function searchEvidence(query) {
   }
 
   const searches = await Promise.allSettled([
+    searchPubMed(cleanedQuery),
     searchSemanticScholar(cleanedQuery),
     searchOpenAlex(cleanedQuery),
     searchCrossref(cleanedQuery),

@@ -129,6 +129,13 @@
   cursor: wait;
 }
 
+.helix-explore-form .helix-explore-save-question {
+  margin-top: 8px;
+  border: 1px solid #ded9cc;
+  background: transparent;
+  color: #30332d;
+}
+
 .helix-explore-error {
   margin-top: 14px;
   color: #9a2d22;

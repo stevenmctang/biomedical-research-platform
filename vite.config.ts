@@ -14,6 +14,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/monarch/, '/v3/api'),
       },
+      '/api/evidence': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
     },
   },
 })

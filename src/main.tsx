@@ -6,31 +6,11 @@ import {
   createRoot,
 } from 'react-dom/client'
 
-import {
-  ClerkProvider,
-} from '@clerk/react'
+import { AuthSessionProvider } from './auth/AuthSession'
 
 import App from './App'
 
 import './index.css'
-
-
-const publishableKey =
-  import.meta.env
-    .VITE_CLERK_PUBLISHABLE_KEY
-
-
-const app = publishableKey ? (
-  <ClerkProvider
-    publishableKey={
-      publishableKey
-    }
-  >
-    <App />
-  </ClerkProvider>
-) : (
-  <App />
-)
 
 
 createRoot(
@@ -39,6 +19,8 @@ createRoot(
   )!,
 ).render(
   <StrictMode>
-    {app}
+    <AuthSessionProvider>
+      <App />
+    </AuthSessionProvider>
   </StrictMode>,
 )

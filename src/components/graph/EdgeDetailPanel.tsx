@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, ExternalLink, Loader2, X } from 'lucide-react'
 import type { AssociationDetail, GraphEdge, GraphNode } from '../../types/biomedical'
+import { assessEvidence } from '../../utils/evidenceQuality'
 import { entityVisuals, relationshipLabels } from './entityConfig'
 
 interface EdgeDetailPanelProps {
@@ -13,7 +14,21 @@ interface EdgeDetailPanelProps {
   onClose: () => void
 }
 
-const NOT_AVAILABLE = 'Not available from current data source'
+interface EvidenceArticle {
+  id: string
+  title: string
+  source: string
+  year: string
+  url: string
+  doi: string
+  pubmedId: string
+  provider: string
+  type: string
+}
+
+interface EvidenceApiResponse {
+  articles: EvidenceArticle[]
+}
 
 export function EdgeDetailPanel({
   edge,
@@ -25,6 +40,45 @@ export function EdgeDetailPanel({
 }: EdgeDetailPanelProps) {
   const navigate = useNavigate()
   const [navigating, setNavigating] = useState(false)
+  const [relatedArticles, setRelatedArticles] = useState<EvidenceArticle[]>([])
+  const [loadingRelated, setLoadingRelated] = useState(false)
+  const [relatedError, setRelatedError] = useState<string | null>(null)
+
+  const literatureQuery = [sourceNode?.label, targetNode?.label]
+    .filter(Boolean)
+    .join(' ')
+
+  useEffect(() => {
+    if (!edge || !literatureQuery) {
+      setRelatedArticles([])
+      setRelatedError(null)
+      setLoadingRelated(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const params = new URLSearchParams({ q: literatureQuery })
+    setRelatedArticles([])
+    setRelatedError(null)
+    setLoadingRelated(true)
+
+    fetch(`/api/evidence?${params.toString()}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Literature search failed (${response.status})`)
+        return response.json() as Promise<EvidenceApiResponse>
+      })
+      .then((data) => setRelatedArticles((data.articles ?? []).slice(0, 3)))
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setRelatedError(error instanceof Error ? error.message : 'Literature search failed.')
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingRelated(false)
+      })
+
+    return () => controller.abort()
+  }, [edge?.id, literatureQuery])
 
   if (!edge) return null
 
@@ -111,7 +165,7 @@ export function EdgeDetailPanel({
                 {edge.evidence}
               </span>
             ) : (
-              NOT_AVAILABLE
+              'Unrated: no direct evidence grade supplied by Monarch'
             )}
           </dd>
         </div>
@@ -120,7 +174,7 @@ export function EdgeDetailPanel({
           <dd>
             {edge.evidenceCodes && edge.evidenceCodes.length > 0
               ? edge.evidenceCodes.join(', ')
-              : NOT_AVAILABLE}
+              : 'No evidence codes supplied by Monarch'}
           </dd>
         </div>
         <div className="kg-edge-meta-row">
@@ -133,7 +187,7 @@ export function EdgeDetailPanel({
                 ))}
               </ul>
             ) : (
-              NOT_AVAILABLE
+              'No source attribution supplied by Monarch'
             )}
           </dd>
         </div>
@@ -142,7 +196,7 @@ export function EdgeDetailPanel({
           <dd>
             {detail?.createdDate || edge.updateDate
               ? formatDate(detail?.createdDate || edge.updateDate)
-              : NOT_AVAILABLE}
+              : 'No date supplied by Monarch'}
           </dd>
         </div>
         <div className="kg-edge-meta-row">
@@ -150,7 +204,7 @@ export function EdgeDetailPanel({
           <dd>
             {detail?.updateDate || edge.updateDate
               ? formatDate(detail?.updateDate || edge.updateDate)
-              : NOT_AVAILABLE}
+              : 'No update date supplied by Monarch'}
           </dd>
         </div>
       </dl>
@@ -167,11 +221,60 @@ export function EdgeDetailPanel({
           <p className="kg-edge-pubs-title">Publications</p>
           <ul className="kg-edge-pubs-list">
             {detail.publications.slice(0, 5).map((pub, i) => (
-              <li key={i}>{pub}</li>
+              <li key={i}>
+                {publicationUrl(pub) ? (
+                  <a href={publicationUrl(pub)} target="_blank" rel="noreferrer">
+                    {pub} <ExternalLink size={11} />
+                  </a>
+                ) : pub}
+              </li>
             ))}
           </ul>
         </div>
       )}
+
+      <section className="kg-edge-literature" aria-live="polite">
+        <div className="kg-edge-literature-heading">
+          <span>Related literature candidates</span>
+          {loadingRelated && <Loader2 size={13} className="kg-spin-icon" />}
+        </div>
+
+        {relatedArticles.map((article) => {
+          const assessment = assessEvidence(article)
+          return (
+            <article className="kg-edge-literature-item" key={article.id}>
+              <a href={article.url} target="_blank" rel="noreferrer">
+                {article.title} <ExternalLink size={11} />
+              </a>
+              <span>{article.source} · {article.year} · {article.type}</span>
+              <span title={`${assessment.sourceReason} ${assessment.strengthReason}`}>
+                {assessment.sourceLabel} · {assessment.strengthLabel} evidence
+              </span>
+            </article>
+          )
+        })}
+
+        {relatedError && (
+          <p className="kg-edge-literature-note">
+            {relatedError}. Search PubMed directly for this relationship.
+          </p>
+        )}
+
+        {!loadingRelated && !relatedError && relatedArticles.length === 0 && (
+          <p className="kg-edge-literature-note">
+            No matching papers returned; this is not evidence that no studies exist.
+          </p>
+        )}
+
+        <a
+          className="kg-edge-pubmed-link"
+          href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(literatureQuery)}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Search NLM PubMed <ExternalLink size={11} />
+        </a>
+      </section>
 
       <button
         type="button"
@@ -196,7 +299,7 @@ export function EdgeDetailPanel({
 }
 
 function formatDate(dateStr: string): string {
-  if (!dateStr) return 'Not available from current data source'
+  if (!dateStr) return 'No date supplied by Monarch'
   try {
     const d = new Date(dateStr)
     if (isNaN(d.getTime())) return dateStr
@@ -204,4 +307,18 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr
   }
+}
+
+function publicationUrl(publication: string): string | null {
+  const value = publication.trim()
+  const pmid = value.match(/^(?:PMID:?)?\s*(\d+)$/i)?.[1]
+  if (pmid) return `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`
+
+  const pmcId = value.match(/^(?:PMC:?)?\s*(PMC\d+)$/i)?.[1]
+  if (pmcId) return `https://pmc.ncbi.nlm.nih.gov/articles/${pmcId}/`
+
+  const doi = value.replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '')
+  if (/^10\.\d{4,9}\/\S+$/i.test(doi)) return `https://doi.org/${doi}`
+  if (/^https?:\/\//i.test(value)) return value
+  return null
 }
